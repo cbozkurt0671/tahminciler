@@ -1,8 +1,11 @@
+import 'dart:math';
 import 'package:flutter/material.dart';
+import '../../../../core/theme/app_colors.dart';
+import '../../../../core/utils/image_loader.dart';
 import '../../data/models/match_model.dart';
 
-/// Compact hero carousel for featured matches
-/// Displays swipeable cards in slim banner format (140px height)
+/// Enhanced hero carousel for featured matches with dynamic content
+/// Full PageView slider with hype texts and special questions
 class HeroCarousel extends StatefulWidget {
   final List<MatchModel> heroMatches;
   final Function(String)? onMatchTap;
@@ -20,17 +23,69 @@ class HeroCarousel extends StatefulWidget {
 class _HeroCarouselState extends State<HeroCarousel> {
   late PageController _pageController;
   int _currentPage = 0;
+  final Map<String, String?> _selectedAnswers = {};
+
+  // Hype texts for different matches
+  final List<String> _hypeTexts = [
+    '🔥 Derbi Ateşi',
+    '💎 Günün Bankosu',
+    '⚡ Şok Sonuç Bekleniyor',
+    '🎯 Kritik Karşılaşma',
+    '👑 Liderlik Mücadelesi',
+    '⭐ Yıldızlar Sahada',
+    '🚀 Gol Yağmuru Geliyor',
+    '💪 Dev Kapışma',
+  ];
+
+  // Special questions for each match
+  final List<Map<String, dynamic>> _specialQuestions = [
+    {
+      'question': 'Toplam gol sayısı 2.5 üstü olur mu?',
+      'options': ['EVET', 'HAYIR'],
+      'icon': Icons.sports_soccer,
+    },
+    {
+      'question': 'İlk golü hangi takım atar?',
+      'options': ['EV SAHİBİ', 'DEPLASMAN'],
+      'icon': Icons.flag,
+    },
+    {
+      'question': 'Maçta kırmızı kart çıkar mı?',
+      'options': ['ÇIKAR', 'ÇIKMAZ'],
+      'icon': Icons.credit_card,
+    },
+    {
+      'question': 'Her iki takım da gol atar mı?',
+      'options': ['EVET', 'HAYIR'],
+      'icon': Icons.compare_arrows,
+    },
+    {
+      'question': 'İlk yarı golsüz biter mi?',
+      'options': ['EVET', 'HAYIR'],
+      'icon': Icons.timer,
+    },
+  ];
 
   @override
   void initState() {
     super.initState();
-    _pageController = PageController(viewportFraction: 0.9);
+    _pageController = PageController(viewportFraction: 0.92);
   }
 
   @override
   void dispose() {
     _pageController.dispose();
     super.dispose();
+  }
+
+  String _getHypeText(int index) {
+    final random = Random(index);
+    return _hypeTexts[random.nextInt(_hypeTexts.length)];
+  }
+
+  Map<String, dynamic> _getSpecialQuestion(int index) {
+    final random = Random(index);
+    return _specialQuestions[random.nextInt(_specialQuestions.length)];
   }
 
   @override
@@ -41,9 +96,9 @@ class _HeroCarouselState extends State<HeroCarousel> {
 
     return Column(
       children: [
-        // Compact Carousel (140px)
+        // Enhanced Hero Carousel with special questions
         SizedBox(
-          height: 140,
+          height: 420, // Increased height for special question section
           child: PageView.builder(
             controller: _pageController,
             onPageChanged: (index) {
@@ -56,14 +111,7 @@ class _HeroCarouselState extends State<HeroCarousel> {
               final match = widget.heroMatches[index];
               return Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 8),
-                child: GestureDetector(
-                  onTap: () {
-                    if (widget.onMatchTap != null) {
-                      widget.onMatchTap!(match.id);
-                    }
-                  },
-                  child: _buildCompactHeroCard(match),
-                ),
+                child: _buildEnhancedHeroCard(match, index),
               );
             },
           ),
@@ -71,8 +119,8 @@ class _HeroCarouselState extends State<HeroCarousel> {
         
         const SizedBox(height: 12),
         
-        // Dots indicator
-        if (widget.heroMatches.length > 1) _buildDotsIndicator(),
+        // Page indicator dots
+        if (widget.heroMatches.length > 1) _buildPageIndicator(),
       ],
     );
   }
@@ -111,7 +159,7 @@ class _HeroCarouselState extends State<HeroCarousel> {
                   child: Column(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      _buildCircularFlag(match.homeFlagUrl ?? ''),
+                      _buildCircularFlag(match.homeTeamId ?? 0),
                       const SizedBox(height: 6),
                       Text(
                         match.homeTeam,
@@ -241,7 +289,7 @@ class _HeroCarouselState extends State<HeroCarousel> {
                   child: Column(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      _buildCircularFlag(match.awayFlagUrl ?? ''),
+                      _buildCircularFlag(match.awayTeamId ?? 0),
                       const SizedBox(height: 6),
                       Text(
                         match.awayTeam,
@@ -283,7 +331,7 @@ class _HeroCarouselState extends State<HeroCarousel> {
     );
   }
 
-  Widget _buildCircularFlag(String flagUrl) {
+  Widget _buildCircularFlag(int teamId) {
     return Container(
       width: 36,
       height: 36,
@@ -299,31 +347,11 @@ class _HeroCarouselState extends State<HeroCarousel> {
         ],
       ),
       child: ClipOval(
-        child: Image.network(
-          flagUrl,
+        child: CachedTeamLogoWidget(
+          teamId: teamId,
+          size: 40,
           fit: BoxFit.cover,
-          errorBuilder: (context, error, stackTrace) {
-            return Container(
-              color: Colors.white.withOpacity(0.1),
-              child: const Icon(Icons.flag, color: Colors.white54, size: 18),
-            );
-          },
-          loadingBuilder: (context, child, loadingProgress) {
-            if (loadingProgress == null) return child;
-            return Container(
-              color: Colors.white.withOpacity(0.1),
-              child: const Center(
-                child: SizedBox(
-                  width: 16,
-                  height: 16,
-                  child: CircularProgressIndicator(
-                    strokeWidth: 2,
-                    valueColor: AlwaysStoppedAnimation<Color>(Colors.white54),
-                  ),
-                ),
-              ),
-            );
-          },
+          fallbackIconColor: Colors.white54,
         ),
       ),
     );

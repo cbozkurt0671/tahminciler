@@ -23,13 +23,20 @@ class DummyMatchData {
         city: 'Los Angeles',
         stadium: 'SoFi Stadium',
         group: 'A Grubu',
+        category: 'World Cup 2026',
         isLive: true,
+        liveMatchTime: "67'", // Changed to actual minute
+        status: 'inprogress',
         isFavorite: true,
         isHero: true,
         homeScore: 2,
         awayScore: 1,
         homeScorers: ['Pulisic 23\'', 'Reyna 38\''],
         awayScorers: ['Lozano 15\''],
+        userPredictions: {
+          '1_goals': 'EVET',
+          '1_btts': 'EVET',
+        },
         questions: [
           const PredictionQuestion(
             id: 'q_var_check',

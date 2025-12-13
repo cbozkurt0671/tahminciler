@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'dart:math';
 import 'package:http/http.dart' as http;
 import '../../domain/repositories/match_repository.dart';
 import '../models/match_model.dart';
@@ -222,6 +223,39 @@ class SofaScoreRepository implements MatchRepository {
         for (final match in matches) {
           print('   🏟️ ${match.group}: ${match.homeTeam} vs ${match.awayTeam} at ${match.matchTime}');
         }
+        
+        // ⭐ Select 3-5 random hero matches from different leagues
+        final heroMatches = _selectHeroMatches(matches);
+        print('⭐ Marked ${heroMatches.length} matches as heroes from different leagues');
+        
+        // Update matches list with hero flags
+        for (int i = 0; i < matches.length; i++) {
+          if (heroMatches.any((hero) => hero.id == matches[i].id)) {
+            matches[i] = MatchModel(
+              id: matches[i].id,
+              homeTeam: matches[i].homeTeam,
+              awayTeam: matches[i].awayTeam,
+              homeTeamId: matches[i].homeTeamId,
+              awayTeamId: matches[i].awayTeamId,
+              homeFlagUrl: matches[i].homeFlagUrl,
+              awayFlagUrl: matches[i].awayFlagUrl,
+              matchTime: matches[i].matchTime,
+              matchDate: matches[i].matchDate,
+              city: matches[i].city,
+              stadium: matches[i].stadium,
+              group: matches[i].group,
+              category: matches[i].category,
+              homeScore: matches[i].homeScore,
+              awayScore: matches[i].awayScore,
+              isLive: matches[i].isLive,
+              liveMatchTime: matches[i].liveMatchTime,
+              isHero: true, // ⭐ Mark as hero!
+              isFavorite: matches[i].isFavorite,
+              questions: matches[i].questions,
+            );
+            print('   ⭐ ${matches[i].homeTeam} vs ${matches[i].awayTeam} (${matches[i].group})');
+          }
+        }
       }
 
       _cachedMatches = matches;
@@ -236,6 +270,48 @@ class SofaScoreRepository implements MatchRepository {
     }
   }
 
+  /// Select 3-5 hero matches from different leagues
+  List<MatchModel> _selectHeroMatches(List<MatchModel> matches) {
+    if (matches.isEmpty) return [];
+    
+    // Group matches by league
+    final Map<String, List<MatchModel>> matchesByLeague = {};
+    for (final match in matches) {
+      if (!matchesByLeague.containsKey(match.group)) {
+        matchesByLeague[match.group] = [];
+      }
+      matchesByLeague[match.group]!.add(match);
+    }
+    
+    // Prioritize live matches first
+    final liveMatches = matches.where((m) => m.isLive).toList();
+    if (liveMatches.isNotEmpty) {
+      return liveMatches.take(5).toList();
+    }
+    
+    // Select one match from each league (up to 5 leagues)
+    final selectedMatches = <MatchModel>[];
+    final leagues = matchesByLeague.keys.toList();
+    
+    for (final league in leagues.take(min(5, leagues.length))) {
+      final leagueMatches = matchesByLeague[league]!;
+      if (leagueMatches.isNotEmpty) {
+        // Take first match from each league
+        selectedMatches.add(leagueMatches.first);
+      }
+    }
+    
+    // Ensure at least 3 matches
+    if (selectedMatches.length < 3 && matches.length >= 3) {
+      final remaining = matches.where((m) => !selectedMatches.contains(m)).toList();
+      while (selectedMatches.length < 3 && remaining.isNotEmpty) {
+        selectedMatches.add(remaining.removeAt(0));
+      }
+    }
+    
+    return selectedMatches;
+  }
+
   /// Map SofaScore event JSON to MatchModel
   MatchModel _mapEventToMatchModel(Map<String, dynamic> event, String leagueName) {
     // Extract basic info
@@ -245,9 +321,13 @@ class SofaScoreRepository implements MatchRepository {
     final homeTeamId = event['homeTeam']?['id'] as int? ?? 0;
     final awayTeamId = event['awayTeam']?['id'] as int? ?? 0;
     
-    // Construct flag URLs using team IDs
-    final homeFlagUrl = 'https://api.sofascore.app/api/v1/team/$homeTeamId/image';
-    final awayFlagUrl = 'https://api.sofascore.app/api/v1/team/$awayTeamId/image';
+    // Construct logo URLs using .com domain (requires browser headers in UI)
+    // Format: https://api.sofascore.com/api/v1/team/{teamId}/image
+    final homeFlagUrl = 'https://api.sofascore.com/api/v1/team/$homeTeamId/image';
+    final awayFlagUrl = 'https://api.sofascore.com/api/v1/team/$awayTeamId/image';
+    
+    print('🏷️ Team IDs: Home=$homeTeamId ($homeTeam), Away=$awayTeamId ($awayTeam)');
+    print('🖼️ Logo URLs: Home=$homeFlagUrl, Away=$awayFlagUrl');
     
     // Parse timestamp
     final startTimestamp = event['startTimestamp'] as int? ?? 0;
@@ -275,8 +355,39 @@ class SofaScoreRepository implements MatchRepository {
     // Get scores and status
     final status = event['status'] ?? {};
     final statusCode = status['code'] as int? ?? 0;
+    final statusDescription = status['description'] as String?;
+    final statusType = status['type'] as String?;
     final isLive = statusCode == 6 || statusCode == 7; // 6 = 1st half, 7 = 2nd half
     final isFinished = statusCode == 100;
+    
+    // Extract live match time with Turkish localization
+    String? liveMatchTime;
+    if (isLive) {
+      // Try to get actual minute from API
+      // SofaScore can provide: "34'", "45+2'", "1st half", "2nd half", etc.
+      if (statusDescription != null) {
+        // If description contains actual minute (e.g., "34'" or "45+2'")
+        if (statusDescription.contains("'")) {
+          liveMatchTime = statusDescription;
+        } 
+        // If description is "1st half" or "2nd half", use Turkish equivalent
+        else if (statusDescription.toLowerCase().contains('1st half')) {
+          liveMatchTime = '1. Yarı';
+        } 
+        else if (statusDescription.toLowerCase().contains('2nd half')) {
+          liveMatchTime = '2. Yarı';
+        }
+        else if (statusDescription.toLowerCase().contains('halftime')) {
+          liveMatchTime = 'Devre Arası';
+        }
+        else {
+          liveMatchTime = 'CANLI';
+        }
+      } else {
+        // Fallback to status code if no description
+        liveMatchTime = statusCode == 6 ? '1. Yarı' : '2. Yarı';
+      }
+    }
     
     int? homeScore;
     int? awayScore;
@@ -287,11 +398,21 @@ class SofaScoreRepository implements MatchRepository {
       homeScore = homeScoreData['current'] as int?;
       awayScore = awayScoreData['current'] as int?;
     }
+    
+    // Determine match status
+    String matchStatus = 'notstarted';
+    if (isFinished) {
+      matchStatus = 'finished';
+    } else if (isLive) {
+      matchStatus = 'inprogress';
+    }
 
     return MatchModel(
       id: id,
       homeTeam: homeTeam,
       awayTeam: awayTeam,
+      homeTeamId: homeTeamId,
+      awayTeamId: awayTeamId,
       homeFlagUrl: homeFlagUrl,
       awayFlagUrl: awayFlagUrl,
       matchTime: matchTime,
@@ -299,13 +420,46 @@ class SofaScoreRepository implements MatchRepository {
       city: city,
       stadium: stadium,
       group: group,
+      category: leagueName, // Add league as category for display
       homeScore: homeScore,
       awayScore: awayScore,
       isLive: isLive,
+      liveMatchTime: liveMatchTime,
+      status: matchStatus,
       isHero: false, // Can be customized based on featured matches
       isFavorite: false,
-      questions: [], // No prediction questions from API
+      questions: _generatePredictionQuestions(id), // Generate prediction questions
     );
+  }
+  
+  /// Generate prediction questions for a match
+  List<PredictionQuestion> _generatePredictionQuestions(String matchId) {
+    return [
+      PredictionQuestion(
+        id: '${matchId}_goals',
+        text: 'Maçta 2.5 üstü gol olur mu?',
+        yesPoints: 25,
+        noPoints: 25,
+      ),
+      PredictionQuestion(
+        id: '${matchId}_btts',
+        text: 'Her iki takım gol atar mı?',
+        yesPoints: 20,
+        noPoints: 20,
+      ),
+      PredictionQuestion(
+        id: '${matchId}_corner',
+        text: '10+ korner olur mu?',
+        yesPoints: 15,
+        noPoints: 15,
+      ),
+      PredictionQuestion(
+        id: '${matchId}_card',
+        text: 'Kırmızı kart çıkar mı?',
+        yesPoints: 30,
+        noPoints: 30,
+      ),
+    ];
   }
 
   /// Extract city from group name (fallback)

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import '../../../../core/theme/app_colors.dart';
+import '../../../../core/utils/image_loader.dart';
 import '../../data/models/match_model.dart';
 
 /// Card widget for quick match prediction
@@ -91,9 +92,11 @@ class _QuickPredictCardState extends State<QuickPredictCard> {
                       flex: 2,
                       child: Row(
                         children: [
-                          Text(
-                            widget.match.homeTeamFlag,
-                            style: const TextStyle(fontSize: 32),
+                          CachedTeamLogoWidget(
+                            teamId: widget.match.homeTeamId ?? 0,
+                            size: 30,
+                            fit: BoxFit.contain,
+                            fallbackIconColor: AppColors.textSecondary.withOpacity(0.5),
                           ),
                           const SizedBox(width: 12),
                           Expanded(
@@ -158,9 +161,11 @@ class _QuickPredictCardState extends State<QuickPredictCard> {
                             ),
                           ),
                           const SizedBox(width: 12),
-                          Text(
-                            widget.match.awayTeamFlag,
-                            style: const TextStyle(fontSize: 32),
+                          CachedTeamLogoWidget(
+                            teamId: widget.match.awayTeamId ?? 0,
+                            size: 30,
+                            fit: BoxFit.contain,
+                            fallbackIconColor: AppColors.textSecondary.withOpacity(0.5),
                           ),
                         ],
                       ),

@@ -6,7 +6,7 @@ import '../../../../core/service_locator.dart';
 import '../../domain/repositories/match_repository.dart';
 import '../../data/models/match_model.dart';
 import '../widgets/home_header.dart';
-import '../widgets/hero_carousel.dart';
+import '../widgets/hero_carousel_enhanced.dart';
 import '../widgets/expandable_match_card.dart';
 import 'group_detail_screen.dart';
 
@@ -29,6 +29,7 @@ class _HomeScreenState extends State<HomeScreen> {
   late List<MatchModel> _heroMatches;
   late PageController _pageController;
   int _currentPageIndex = 0;
+  int _selectedBottomNavIndex = 0; // Bottom Navigation state
   final ScrollController _scrollController = ScrollController();
   final Map<String, GlobalKey> _matchKeys = {};
   bool _isLoading = true;
@@ -60,6 +61,8 @@ class _HomeScreenState extends State<HomeScreen> {
       // Extract hero matches (those with isHero: true)
       _heroMatches = _allMatches.where((match) => match.isHero).toList();
       
+      print('⭐ Found ${_heroMatches.length} hero matches');
+      
       // Extract unique dates and sort them
       final Set<String> dateSet = {};
       for (final match in _allMatches) {
@@ -74,7 +77,7 @@ class _HomeScreenState extends State<HomeScreen> {
       _matchesByDate = {};
       for (final date in _uniqueDates) {
         final matchesOnDate = _allMatches
-            .where((match) => match.matchDate == date && !match.isHero)
+            .where((match) => match.matchDate == date)
             .toList();
         _matchesByDate[date] = matchesOnDate;
         
@@ -124,7 +127,7 @@ class _HomeScreenState extends State<HomeScreen> {
       _matchesByDate = {};
       for (final date in _uniqueDates) {
         final matchesOnDate = _allMatches
-            .where((match) => match.matchDate == date && !match.isHero)
+            .where((match) => match.matchDate == date)
             .toList();
         _matchesByDate[date] = matchesOnDate;
         
@@ -434,28 +437,16 @@ class _HomeScreenState extends State<HomeScreen> {
                 ),
               ),
             ),
-            // Main content
+            // Main content with CustomScrollView
             SafeArea(
               child: Column(
                 children: [
-                  // Header
+                  // Header - Always visible at top
                   const HomeHeader(),
                   
-                  // Hero Carousel
-                  if (_heroMatches.isNotEmpty) ...[
-                    HeroCarousel(
-                      heroMatches: _heroMatches,
-                      onMatchTap: _scrollToMatch,
-                    ),
-                    const SizedBox(height: 16),
-                  ],
+                  const SizedBox(height: 8),
                   
-                  // Date Navigation Header
-                  _buildDateNavigationHeader(),
-                  
-                  const SizedBox(height: 12),
-                  
-                  // Day-by-Day PageView
+                  // Scrollable content
                   Expanded(
                     child: PageView.builder(
                       controller: _pageController,
@@ -476,7 +467,7 @@ class _HomeScreenState extends State<HomeScreen> {
                         // Group matches on this date by group name
                         final groupedMatches = _groupMatchesByGroup(matchesOnDate);
                         
-                        return _buildDayMatchList(groupedMatches);
+                        return _buildSliverScrollView(groupedMatches);
                       },
                     ),
                   ),
@@ -485,32 +476,207 @@ class _HomeScreenState extends State<HomeScreen> {
             ),
           ],
         ),
+        // Bottom Navigation Bar
+        bottomNavigationBar: _buildBottomNavigationBar(),
       ),
     );
   }
   
-  Widget _buildDateNavigationHeader() {
+  /// CustomScrollView with Sliver structure for smooth scrolling
+  Widget _buildSliverScrollView(Map<String, List<MatchModel>> groupedMatches) {
+    return CustomScrollView(
+      controller: _scrollController,
+      slivers: [
+        // Fixed content at top (scrolls away)
+        SliverToBoxAdapter(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // Compact Date Navigation
+              _buildCompactDateNavigation(),
+              
+              const SizedBox(height: 12),
+              
+              // Enhanced Hero Carousel (3-5 featured matches)
+              if (_heroMatches.isNotEmpty) ...[
+                HeroCarouselEnhanced(
+                  heroMatches: _heroMatches,
+                  onMatchTap: _scrollToMatch,
+                ),
+                const SizedBox(height: 16),
+              ],
+              
+              // "Günün Maçları" Header
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 20),
+                child: Row(
+                  children: [
+                    Icon(
+                      Icons.calendar_today_rounded,
+                      size: 20,
+                      color: const Color(0xFF00E676),
+                    ),
+                    const SizedBox(width: 8),
+                    Text(
+                      'Günün Maçları',
+                      style: TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.w700,
+                        color: Colors.white,
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Container(
+                        height: 1,
+                        decoration: BoxDecoration(
+                          gradient: LinearGradient(
+                            colors: [
+                              const Color(0xFF00E676).withOpacity(0.5),
+                              Colors.transparent,
+                            ],
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              
+              const SizedBox(height: 16),
+            ],
+          ),
+        ),
+        
+        // Match list (scrollable)
+        SliverList(
+          delegate: SliverChildBuilderDelegate(
+            (context, index) {
+              final groupName = groupedMatches.keys.elementAt(index);
+              final groupMatches = groupedMatches[groupName]!;
+              
+              return Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 20),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    // Group Header
+                    Padding(
+                      padding: EdgeInsets.only(bottom: 12, top: index == 0 ? 0 : 8),
+                      child: InkWell(
+                        onTap: () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (context) => GroupDetailScreen(
+                                groupName: groupName,
+                                matches: groupMatches,
+                              ),
+                            ),
+                          );
+                        },
+                        borderRadius: BorderRadius.circular(12),
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                          decoration: BoxDecoration(
+                            gradient: LinearGradient(
+                              colors: [
+                                const Color(0xFF00E676).withOpacity(0.15),
+                                const Color(0xFF00B8D4).withOpacity(0.10),
+                              ],
+                              begin: Alignment.centerLeft,
+                              end: Alignment.centerRight,
+                            ),
+                            borderRadius: BorderRadius.circular(12),
+                            border: Border.all(
+                              color: const Color(0xFF00E676).withOpacity(0.3),
+                              width: 1,
+                            ),
+                          ),
+                          child: Row(
+                            children: [
+                              Icon(
+                                Icons.emoji_events_rounded,
+                                size: 18,
+                                color: const Color(0xFF00E676),
+                              ),
+                              const SizedBox(width: 8),
+                              Expanded(
+                                child: Text(
+                                  groupName,
+                                  style: const TextStyle(
+                                    fontSize: 15,
+                                    fontWeight: FontWeight.w700,
+                                    color: Colors.white,
+                                  ),
+                                ),
+                              ),
+                              Icon(
+                                Icons.chevron_right,
+                                size: 20,
+                                color: const Color(0xFF00E676).withOpacity(0.7),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ),
+                    
+                    // Group Matches
+                    ...groupMatches.asMap().entries.map((entry) {
+                      final matchIndex = entry.key;
+                      final match = entry.value;
+                      return Padding(
+                        padding: EdgeInsets.only(
+                          bottom: matchIndex == groupMatches.length - 1 ? 16 : 12,
+                        ),
+                        child: ExpandableMatchCard(
+                          key: _matchKeys[match.id], // Use GlobalKey for state preservation
+                          match: match,
+                          onScoreChanged: (homeScore, awayScore) {
+                            _handleScoreChanged(match, homeScore, awayScore);
+                          },
+                          onExtraPredictionChanged: (question, answer) {
+                            _handleExtraPredictionChanged(match, question, answer);
+                          },
+                          onFavoriteToggled: (isFavorite) {
+                            _handleFavoriteToggled(match, isFavorite);
+                          },
+                        ),
+                      );
+                    }).toList(),
+                  ],
+                ),
+              );
+            },
+            childCount: groupedMatches.keys.length,
+          ),
+        ),
+        
+        // Bottom padding for safe area
+        SliverToBoxAdapter(
+          child: const SizedBox(height: 20),
+        ),
+      ],
+    );
+  }
+  
+  /// Compact Date Navigation - Thin horizontal bar above match list
+  Widget _buildCompactDateNavigation() {
     if (_uniqueDates.isEmpty) return const SizedBox.shrink();
     
     final currentDate = _uniqueDates[_currentPageIndex];
     final weekday = _getWeekday(currentDate);
     
     return Container(
-      margin: const EdgeInsets.symmetric(horizontal: 20),
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
       decoration: BoxDecoration(
-        gradient: LinearGradient(
-          colors: [
-            const Color(0xFF00E676).withOpacity(0.15),
-            const Color(0xFF00B8D4).withOpacity(0.10),
-          ],
-          begin: Alignment.centerLeft,
-          end: Alignment.centerRight,
-        ),
-        borderRadius: BorderRadius.circular(16),
+        color: Colors.white.withOpacity(0.05),
+        borderRadius: BorderRadius.circular(10),
         border: Border.all(
-          color: const Color(0xFF00E676).withOpacity(0.3),
-          width: 1.5,
+          color: Colors.white.withOpacity(0.1),
+          width: 1,
         ),
       ),
       child: Row(
@@ -518,53 +684,51 @@ class _HomeScreenState extends State<HomeScreen> {
         children: [
           // Previous Day Arrow
           IconButton(
-            icon: Icon(
+            icon: const Icon(
               Icons.chevron_left,
-              color: const Color(0xFF00E676),
-              size: 28,
+              color: Color(0xFF00E676),
+              size: 20,
             ),
+            padding: EdgeInsets.zero,
+            constraints: const BoxConstraints(minWidth: 30, minHeight: 30),
             onPressed: _goToPreviousDay,
           ),
           
-          // Date Display
-          // Date Display
-          Expanded(
+          // Date Display (Horizontal)
+          Flexible(
             child: GestureDetector(
               onTap: _showDatePicker,
-              child: Column(
+              child: Row(
                 mainAxisSize: MainAxisSize.min,
+                mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  Text(
-                    currentDate,
-                    style: TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.w700,
-                      color: Colors.white,
-                      letterSpacing: 0.5,
+                  Flexible(
+                    child: Text(
+                      currentDate,
+                      style: const TextStyle(
+                        fontSize: 13,
+                        fontWeight: FontWeight.w600,
+                        color: Colors.white,
+                        letterSpacing: 0.2,
+                      ),
+                      overflow: TextOverflow.ellipsis,
                     ),
-                    textAlign: TextAlign.center,
                   ),
-                  const SizedBox(height: 2),
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Text(
-                        weekday,
-                        style: TextStyle(
-                          fontSize: 12,
-                          fontWeight: FontWeight.w500,
-                          color: const Color(0xFF00E676),
-                          letterSpacing: 0.5,
-                        ),
-                        textAlign: TextAlign.center,
-                      ),
-                      const SizedBox(width: 4),
-                      Icon(
-                        Icons.calendar_today,
-                        size: 12,
-                        color: const Color(0xFF00E676).withOpacity(0.7),
-                      ),
-                    ],
+                  const SizedBox(width: 6),
+                  Text(
+                    weekday,
+                    style: TextStyle(
+                      fontSize: 11,
+                      fontWeight: FontWeight.w500,
+                      color: const Color(0xFF00E676),
+                      letterSpacing: 0.2,
+                    ),
+                  ),
+                  const SizedBox(width: 4),
+                  Icon(
+                    Icons.calendar_today,
+                    size: 12,
+                    color: const Color(0xFF00E676).withOpacity(0.7),
                   ),
                 ],
               ),
@@ -573,14 +737,111 @@ class _HomeScreenState extends State<HomeScreen> {
           
           // Next Day Arrow
           IconButton(
-            icon: Icon(
+            icon: const Icon(
               Icons.chevron_right,
-              color: const Color(0xFF00E676),
-              size: 28,
+              color: Color(0xFF00E676),
+              size: 20,
             ),
+            padding: EdgeInsets.zero,
+            constraints: const BoxConstraints(minWidth: 30, minHeight: 30),
             onPressed: _goToNextDay,
           ),
         ],
+      ),
+    );
+  }
+  
+  Widget _buildBottomNavigationBar() {
+    return Container(
+      decoration: BoxDecoration(
+        color: const Color(0xFF1A1A24),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.3),
+            blurRadius: 15,
+            offset: const Offset(0, -3),
+          ),
+        ],
+      ),
+      child: SafeArea(
+        top: false,
+        child: Container(
+          height: 56,
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceAround,
+            children: [
+              _buildBottomNavItem(
+                icon: Icons.home_rounded,
+                label: 'Ana Sayfa',
+                index: 0,
+              ),
+              _buildBottomNavItem(
+                icon: Icons.calendar_today_rounded,
+                label: 'Bülten',
+                index: 1,
+              ),
+              _buildBottomNavItem(
+                icon: Icons.fact_check_rounded,
+                label: 'Tahminlerim',
+                index: 2,
+              ),
+              _buildBottomNavItem(
+                icon: Icons.person_rounded,
+                label: 'Profil',
+                index: 3,
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+  
+  Widget _buildBottomNavItem({
+    required IconData icon,
+    required String label,
+    required int index,
+  }) {
+    final isSelected = _selectedBottomNavIndex == index;
+    
+    return Expanded(
+      child: InkWell(
+        onTap: () {
+          setState(() {
+            _selectedBottomNavIndex = index;
+          });
+          debugPrint('📱 Bottom Nav tapped: $label (index: $index)');
+        },
+        borderRadius: BorderRadius.circular(10),
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 4),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(
+                icon,
+                color: isSelected
+                    ? const Color(0xFF00E676)
+                    : Colors.white.withOpacity(0.4),
+                size: 20,
+              ),
+              const SizedBox(height: 2),
+              Text(
+                label,
+                style: TextStyle(
+                  color: isSelected
+                      ? const Color(0xFF00E676)
+                      : Colors.white.withOpacity(0.4),
+                  fontSize: 8,
+                  fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
+                ),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+              ),
+            ],
+          ),
+        ),
       ),
     );
   }
@@ -707,101 +968,6 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
   
-  Widget _buildDayMatchList(Map<String, List<MatchModel>> groupedMatches) {
-    return ListView.builder(
-      controller: _scrollController,
-      padding: const EdgeInsets.symmetric(horizontal: 20),
-      itemCount: groupedMatches.keys.length,
-      itemBuilder: (context, index) {
-        final groupName = groupedMatches.keys.elementAt(index);
-        final groupMatches = groupedMatches[groupName]!;
-        
-        return Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // Group Header (Clickable)
-            Padding(
-              padding: EdgeInsets.only(bottom: 12, top: index == 0 ? 0 : 8),
-              child: InkWell(
-                onTap: () {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (context) => GroupDetailScreen(
-                        groupName: groupName,
-                        matches: groupMatches,
-                      ),
-                    ),
-                  );
-                },
-                borderRadius: BorderRadius.circular(12),
-                child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                  decoration: BoxDecoration(
-                    gradient: LinearGradient(
-                      colors: [
-                        const Color(0xFF00E676).withOpacity(0.15),
-                        const Color(0xFF00B8D4).withOpacity(0.10),
-                      ],
-                      begin: Alignment.centerLeft,
-                      end: Alignment.centerRight,
-                    ),
-                    borderRadius: BorderRadius.circular(12),
-                    border: Border.all(
-                      color: const Color(0xFF00E676).withOpacity(0.3),
-                      width: 1,
-                    ),
-                  ),
-                  child: Row(
-                    children: [
-                      Icon(
-                        Icons.sports_soccer,
-                        size: 18,
-                        color: const Color(0xFF00E676),
-                      ),
-                      const SizedBox(width: 8),
-                      Text(
-                        groupName,
-                        style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                              fontWeight: FontWeight.w700,
-                              fontSize: 16,
-                              color: const Color(0xFF00E676),
-                              letterSpacing: 0.5,
-                            ),
-                      ),
-                      const Spacer(),
-                      Icon(
-                        Icons.arrow_forward_ios,
-                        size: 14,
-                        color: const Color(0xFF00E676).withOpacity(0.6),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-            ),
-            
-            // Group Matches
-            ...groupMatches.map((match) {
-              return ExpandableMatchCard(
-                key: _matchKeys[match.id], // CRITICAL: Key must be on the StatefulWidget itself
-                match: match,
-                onScoreChanged: (homeScore, awayScore) {
-                  _handleScoreChanged(match, homeScore, awayScore);
-                },
-                onExtraPredictionChanged: (question, answer) {
-                  _handleExtraPredictionChanged(match, question, answer);
-                },
-                onFavoriteToggled: (isFavorite) {
-                  _handleFavoriteToggled(match, isFavorite);
-                },
-              );
-            }).toList(),
-          ],
-        );
-      },
-    );
-  }
 }
 
 // ===========================

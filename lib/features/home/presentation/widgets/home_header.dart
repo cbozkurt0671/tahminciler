@@ -12,20 +12,21 @@ class HomeHeader extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+      padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 12),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
           // Profile Icon
           Container(
-            width: 44,
-            height: 44,
+            width: 40,
+            height: 40,
             decoration: BoxDecoration(
               color: AppColors.cardSurface,
               borderRadius: BorderRadius.circular(12),
             ),
             child: IconButton(
-              icon: const Icon(Iconsax.user, size: 24),
+              icon: const Icon(Iconsax.user, size: 22),
+              padding: EdgeInsets.zero,
               onPressed: () {
                 Navigator.push(
                   context,
@@ -43,16 +44,16 @@ class HomeHeader extends StatelessWidget {
                 'World Cup 2026',
                 style: Theme.of(context).textTheme.titleLarge?.copyWith(
                   fontWeight: FontWeight.w700,
-                  fontSize: 20,
+                  fontSize: 18,
                 ),
               ),
               Text(
                 'USA • CANADA • MEXICO',
                 style: Theme.of(context).textTheme.bodySmall?.copyWith(
                   color: AppColors.textSecondary.withOpacity(0.6),
-                  fontSize: 8,
+                  fontSize: 7,
                   fontWeight: FontWeight.w600,
-                  letterSpacing: 1.2,
+                  letterSpacing: 1.0,
                 ),
               ),
             ],
@@ -60,8 +61,8 @@ class HomeHeader extends StatelessWidget {
           
           // Social / Leaderboard Icon
           Container(
-            width: 44,
-            height: 44,
+            width: 40,
+            height: 40,
             decoration: BoxDecoration(
               color: AppColors.cardSurface,
               borderRadius: BorderRadius.circular(12),
@@ -69,7 +70,8 @@ class HomeHeader extends StatelessWidget {
             child: Stack(
               children: [
                 IconButton(
-                  icon: const Icon(Iconsax.cup, size: 24),
+                  icon: const Icon(Iconsax.cup, size: 22),
+                  padding: EdgeInsets.zero,
                   onPressed: () {
                     Navigator.push(
                       context,
@@ -79,11 +81,11 @@ class HomeHeader extends StatelessWidget {
                 ),
                 // Badge indicator (optional - can show league updates)
                 Positioned(
-                  right: 10,
-                  top: 10,
+                  right: 8,
+                  top: 8,
                   child: Container(
-                    width: 8,
-                    height: 8,
+                    width: 7,
+                    height: 7,
                     decoration: BoxDecoration(
                       color: const Color(0xFF00E676),
                       shape: BoxShape.circle,

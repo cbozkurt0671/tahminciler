@@ -8,11 +8,14 @@ class SofaMatch {
   final int? startTimestamp; // seconds since epoch
   final String? homeTeamName;
   final String? awayTeamName;
+  final int? homeTeamId; // Home team ID for logo URL
+  final int? awayTeamId; // Away team ID for logo URL
   final String? homeTeamColor; // hex string like "#374df5"
   final String? awayTeamColor;
   final String? leagueName;
   final int? round;
-  final String? status;
+  final String? status; // Legacy field (status.type or status.description)
+  final Map<String, dynamic>? statusObject; // Full status object for detailed parsing
   final int? homeScore;
   final int? awayScore;
 
@@ -21,14 +24,64 @@ class SofaMatch {
     this.startTimestamp,
     this.homeTeamName,
     this.awayTeamName,
+    this.homeTeamId,
+    this.awayTeamId,
     this.homeTeamColor,
     this.awayTeamColor,
     this.leagueName,
     this.round,
     this.status,
+    this.statusObject,
     this.homeScore,
     this.awayScore,
   });
+
+  /// Returns true if match is currently in progress
+  bool get isLive {
+    if (statusObject != null && statusObject!['type'] != null) {
+      return statusObject!['type'] == 'inprogress';
+    }
+    // Fallback to legacy status string
+    return status?.toLowerCase() == 'inprogress';
+  }
+
+  /// Returns current match time with Turkish localization
+  /// Returns null if match hasn't started yet
+  String? get matchTime {
+    if (!isLive) return null;
+    
+    if (statusObject != null && statusObject!['description'] != null) {
+      final description = statusObject!['description'] as String;
+      
+      // If description contains actual minute (e.g., "34'" or "45+2'")
+      if (description.contains("'")) {
+        return description;
+      }
+      // Localize half indicators
+      else if (description.toLowerCase().contains('1st half')) {
+        return '1. Yarı';
+      }
+      else if (description.toLowerCase().contains('2nd half')) {
+        return '2. Yarı';
+      }
+      else if (description.toLowerCase().contains('halftime')) {
+        return 'Devre Arası';
+      }
+      
+      return description; // Return as-is if unknown format
+    }
+    
+    return null;
+  }
+
+  /// Returns current score in "homeScore - awayScore" format (e.g., "2 - 1")
+  /// Returns null if scores are not available
+  String? get currentScore {
+    if (homeScore != null && awayScore != null) {
+      return '$homeScore - $awayScore';
+    }
+    return null;
+  }
 
   /// Converts the integer timestamp (seconds) to [DateTime].
   /// Returns null if [startTimestamp] is null.
@@ -41,6 +94,14 @@ class SofaMatch {
   /// or invalid, a sensible default grey is returned.
   Color get homeColor => colorFromHex(homeTeamColor);
   Color get awayColor => colorFromHex(awayTeamColor);
+
+  /// Getter for home team logo URL using .com domain with browser headers
+  String get homeTeamLogoUrl =>
+      'https://api.sofascore.com/api/v1/team/$homeTeamId/image';
+
+  /// Getter for away team logo URL using .com domain with browser headers
+  String get awayTeamLogoUrl =>
+      'https://api.sofascore.com/api/v1/team/$awayTeamId/image';
 
   /// Factory to create [SofaMatch] from SofaScore-like JSON.
   factory SofaMatch.fromJson(Map<String, dynamic> json) {
@@ -61,6 +122,12 @@ class SofaMatch {
       awayTeamName: (json['awayTeam'] != null && json['awayTeam']['name'] != null)
           ? json['awayTeam']['name'] as String
           : null,
+      homeTeamId: json['homeTeam'] != null
+          ? parseNullableInt(json['homeTeam']['id'])
+          : null,
+      awayTeamId: json['awayTeam'] != null
+          ? parseNullableInt(json['awayTeam']['id'])
+          : null,
       homeTeamColor: json['homeTeam'] != null
           ? (json['homeTeam']['teamColors'] != null
               ? json['homeTeam']['teamColors']['primary'] as String?
@@ -76,6 +143,9 @@ class SofaMatch {
       status: json['status'] != null
           ? (json['status']['type'] as String? ?? json['status']['description'] as String?)
           : null,
+      statusObject: json['status'] != null
+          ? Map<String, dynamic>.from(json['status'] as Map)
+          : null,
       homeScore: json['homeScore'] != null ? parseNullableInt(json['homeScore']['current']) : null,
       awayScore: json['awayScore'] != null ? parseNullableInt(json['awayScore']['current']) : null,
     );
@@ -85,10 +155,12 @@ class SofaMatch {
         'id': id,
         'startTimestamp': startTimestamp,
         'homeTeam': {
+          'id': homeTeamId,
           'name': homeTeamName,
           'teamColors': {'primary': homeTeamColor}
         },
         'awayTeam': {
+          'id': awayTeamId,
           'name': awayTeamName,
           'teamColors': {'primary': awayTeamColor}
         },

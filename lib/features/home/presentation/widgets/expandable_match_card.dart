@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import '../../../../core/theme/app_colors.dart';
+import '../../../../core/utils/image_loader.dart';
 import '../../data/models/match_model.dart';
 import '../../data/models/prediction_question.dart';
 
@@ -26,7 +27,7 @@ class ExpandableMatchCard extends StatefulWidget {
 }
 
 class _ExpandableMatchCardState extends State<ExpandableMatchCard>
-    with SingleTickerProviderStateMixin {
+    with TickerProviderStateMixin {
   bool _isExpanded = false;
   final TextEditingController _homeScoreController = TextEditingController();
   final TextEditingController _awayScoreController = TextEditingController();
@@ -35,6 +36,10 @@ class _ExpandableMatchCardState extends State<ExpandableMatchCard>
 
   late AnimationController _animationController;
   late Animation<double> _expandAnimation;
+  
+  // Animation for LIVE badge pulsing effect
+  late AnimationController _pulseController;
+  late Animation<double> _pulseAnimation;
 
   // Dynamic predictions state - Maps question ID to answer (true/false/null)
   final Map<String, bool?> _selectedAnswers = {};
@@ -75,6 +80,24 @@ class _ExpandableMatchCardState extends State<ExpandableMatchCard>
       parent: _animationController,
       curve: Curves.easeInOut,
     );
+    
+    // Initialize pulse animation for LIVE badge
+    _pulseController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 1000),
+    );
+    
+    _pulseAnimation = Tween<double>(begin: 0.7, end: 1.0).animate(
+      CurvedAnimation(
+        parent: _pulseController,
+        curve: Curves.easeInOut,
+      ),
+    );
+    
+    // Start pulsing if match is live
+    if (widget.match.isLive) {
+      _pulseController.repeat(reverse: true);
+    }
 
     _calculateTotalXP();
   }
@@ -149,6 +172,7 @@ class _ExpandableMatchCardState extends State<ExpandableMatchCard>
     _homeFocusNode.dispose();
     _awayFocusNode.dispose();
     _animationController.dispose();
+    _pulseController.dispose();
     super.dispose();
   }
 
@@ -184,17 +208,31 @@ class _ExpandableMatchCardState extends State<ExpandableMatchCard>
                     child: Column(
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        Text(
-                          widget.match.matchTime,
-                          style: const TextStyle(
-                            color: Color(0xFF8E92A2),
-                            fontSize: 13,
-                            fontWeight: FontWeight.w600,
+                        // Show live match time or regular time
+                        if (widget.match.isLive && widget.match.liveMatchTime != null)
+                          // LIVE: Show match minute in green bold
+                          Text(
+                            widget.match.liveMatchTime!,
+                            style: const TextStyle(
+                              color: Color(0xFF00E676), // Neon green
+                              fontSize: 14,
+                              fontWeight: FontWeight.w900,
+                            ),
+                            textAlign: TextAlign.center,
+                          )
+                        else
+                          // NOT LIVE: Show match time
+                          Text(
+                            widget.match.matchTime,
+                            style: const TextStyle(
+                              color: Color(0xFF8E92A2),
+                              fontSize: 13,
+                              fontWeight: FontWeight.w600,
+                            ),
+                            textAlign: TextAlign.center,
                           ),
-                          textAlign: TextAlign.center,
-                        ),
                         const SizedBox(height: 4),
-                        // City badge below time
+                        // City badge or category below time
                         Container(
                           padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
                           decoration: BoxDecoration(
@@ -202,7 +240,9 @@ class _ExpandableMatchCardState extends State<ExpandableMatchCard>
                             borderRadius: BorderRadius.circular(4),
                           ),
                           child: Text(
-                            widget.match.city.split(',')[0], // First part of city name
+                            widget.match.isLive 
+                                ? widget.match.city.split(',')[0] 
+                                : (widget.match.category ?? widget.match.city.split(',')[0]),
                             style: const TextStyle(
                               color: Color(0xFF8E92A2),
                               fontSize: 9,
@@ -240,9 +280,58 @@ class _ExpandableMatchCardState extends State<ExpandableMatchCard>
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
+                        // LIVE BADGE (if match is live)
+                        if (widget.match.isLive)
+                          AnimatedBuilder(
+                            animation: _pulseAnimation,
+                            builder: (context, child) {
+                              return Opacity(
+                                opacity: _pulseAnimation.value,
+                                child: Container(
+                                  margin: const EdgeInsets.only(bottom: 6),
+                                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                                  decoration: BoxDecoration(
+                                    color: Colors.red,
+                                    borderRadius: BorderRadius.circular(4),
+                                    boxShadow: [
+                                      BoxShadow(
+                                        color: Colors.red.withOpacity(0.5 * _pulseAnimation.value),
+                                        blurRadius: 8,
+                                        spreadRadius: 1,
+                                      ),
+                                    ],
+                                  ),
+                                  child: Row(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      Container(
+                                        width: 6,
+                                        height: 6,
+                                        decoration: const BoxDecoration(
+                                          color: Colors.white,
+                                          shape: BoxShape.circle,
+                                        ),
+                                      ),
+                                      const SizedBox(width: 5),
+                                      const Text(
+                                        'CANLI',
+                                        style: TextStyle(
+                                          color: Colors.white,
+                                          fontSize: 10,
+                                          fontWeight: FontWeight.w900,
+                                          letterSpacing: 0.5,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              );
+                            },
+                          ),
+                        
                         // HOME TEAM ROW
                         _buildTeamRow(
-                          flagUrl: widget.match.homeFlagUrl,
+                          teamId: widget.match.homeTeamId ?? 0,
                           teamName: widget.match.homeTeam,
                           scoreController: _homeScoreController,
                           focusNode: _homeFocusNode,
@@ -253,7 +342,7 @@ class _ExpandableMatchCardState extends State<ExpandableMatchCard>
                         
                         // AWAY TEAM ROW
                         _buildTeamRow(
-                          flagUrl: widget.match.awayFlagUrl,
+                          teamId: widget.match.awayTeamId ?? 0,
                           teamName: widget.match.awayTeam,
                           scoreController: _awayScoreController,
                           focusNode: _awayFocusNode,
@@ -283,39 +372,37 @@ class _ExpandableMatchCardState extends State<ExpandableMatchCard>
 
   // Build a single team row (SofaScore style)
   Widget _buildTeamRow({
-    required String flagUrl,
+    required int teamId,
     required String teamName,
     required TextEditingController scoreController,
     required FocusNode focusNode,
     required bool isHome,
   }) {
+    // Determine actual score from match data
+    final int? actualScore = isHome ? widget.match.homeScore : widget.match.awayScore;
+    final bool hasActualScore = actualScore != null;
+    final bool showActualScore = widget.match.isLive || hasActualScore;
+    
     return Row(
       children: [
-        // 1. Flag (Small, circular)
+        // 1. Team Logo (Small, square with rounded corners)
         Container(
           width: 24,
           height: 24,
           decoration: BoxDecoration(
-            shape: BoxShape.circle,
+            borderRadius: BorderRadius.circular(4),
             border: Border.all(
               color: const Color(0xFF2A2D3A),
               width: 1,
             ),
           ),
-          child: ClipOval(
-            child: Image.network(
-              flagUrl,
-              fit: BoxFit.cover,
-              errorBuilder: (context, error, stackTrace) {
-                return Container(
-                  color: const Color(0xFF2A2D3A),
-                  child: const Icon(
-                    Icons.flag,
-                    size: 12,
-                    color: Color(0xFF8E92A2),
-                  ),
-                );
-              },
+          child: ClipRRect(
+            borderRadius: BorderRadius.circular(4),
+            child: CachedTeamLogoWidget(
+              teamId: teamId,
+              size: 24,
+              fit: BoxFit.contain,
+              fallbackIconColor: const Color(0xFF8E92A2),
             ),
           ),
         ),
@@ -338,58 +425,88 @@ class _ExpandableMatchCardState extends State<ExpandableMatchCard>
         
         const SizedBox(width: 12),
         
-        // 3. Score Input (Fixed width, right-aligned)
-        GestureDetector(
-          onTap: () {}, // Prevent expansion when tapping input
-          child: Container(
+        // 3. Score Display or Input
+        if (showActualScore)
+          // Show actual score (live or finished match)
+          Container(
             width: 40,
             height: 36,
             decoration: BoxDecoration(
               color: const Color(0xFF2A2D3A),
               borderRadius: BorderRadius.circular(8),
               border: Border.all(
-                color: focusNode.hasFocus
-                    ? const Color(0xFF00E676)
+                color: widget.match.isLive 
+                    ? const Color(0xFF00E676) 
                     : const Color(0xFF3A3D4A),
-                width: 1.5,
+                width: widget.match.isLive ? 2 : 1,
               ),
             ),
             child: Center(
-              child: TextField(
-                controller: scoreController,
-                focusNode: focusNode,
-                textAlign: TextAlign.center,
-                keyboardType: TextInputType.number,
-                inputFormatters: [
-                  FilteringTextInputFormatter.digitsOnly,
-                  LengthLimitingTextInputFormatter(2),
-                ],
-                style: const TextStyle(
-                  color: Colors.white,
-                  fontSize: 16,
-                  fontWeight: FontWeight.bold,
+              child: Text(
+                actualScore?.toString() ?? '0',
+                style: TextStyle(
+                  color: widget.match.isLive 
+                      ? const Color(0xFF00E676) 
+                      : Colors.white,
+                  fontSize: 18,
+                  fontWeight: FontWeight.w900,
                 ),
-                decoration: const InputDecoration(
-                  border: InputBorder.none,
-                  contentPadding: EdgeInsets.zero,
-                  isDense: true,
+              ),
+            ),
+          )
+        else
+          // Show score input (match not started)
+          GestureDetector(
+            onTap: () {}, // Prevent expansion when tapping input
+            child: Container(
+              width: 40,
+              height: 36,
+              decoration: BoxDecoration(
+                color: const Color(0xFF2A2D3A),
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(
+                  color: focusNode.hasFocus
+                      ? const Color(0xFF00E676)
+                      : const Color(0xFF3A3D4A),
+                  width: 1.5,
                 ),
-                onChanged: (value) {
-                  print('🎯 Score değişti: $value');
-                  _calculateTotalXP();
-                  
-                  // Notify parent
-                  final homeScore = int.tryParse(_homeScoreController.text);
-                  final awayScore = int.tryParse(_awayScoreController.text);
-                  
-                  if (homeScore != null && awayScore != null) {
-                    widget.onScoreChanged?.call(homeScore, awayScore);
-                  }
-                },
+              ),
+              child: Center(
+                child: TextField(
+                  controller: scoreController,
+                  focusNode: focusNode,
+                  textAlign: TextAlign.center,
+                  keyboardType: TextInputType.number,
+                  inputFormatters: [
+                    FilteringTextInputFormatter.digitsOnly,
+                    LengthLimitingTextInputFormatter(2),
+                  ],
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                  ),
+                  decoration: const InputDecoration(
+                    border: InputBorder.none,
+                    contentPadding: EdgeInsets.zero,
+                    isDense: true,
+                  ),
+                  onChanged: (value) {
+                    print('🎯 Score değişti: $value');
+                    _calculateTotalXP();
+                    
+                    // Notify parent
+                    final homeScore = int.tryParse(_homeScoreController.text);
+                    final awayScore = int.tryParse(_awayScoreController.text);
+                    
+                    if (homeScore != null && awayScore != null) {
+                      widget.onScoreChanged?.call(homeScore, awayScore);
+                    }
+                  },
+                ),
               ),
             ),
           ),
-        ),
       ],
     );
   }
@@ -520,6 +637,11 @@ class _ExpandableMatchCardState extends State<ExpandableMatchCard>
     bool? currentValue,
     Function(bool?) onChanged,
   ) {
+    // Check if predictions are locked
+    final isLocked = widget.match.isPredictionLocked;
+    final userAnswer = widget.match.userPredictions[question.id];
+    final hasUserPrediction = userAnswer != null;
+    
     // Create staggered animation delay
     final delay = index * 0.1;
     final animation = Tween<double>(
@@ -555,47 +677,89 @@ class _ExpandableMatchCardState extends State<ExpandableMatchCard>
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Question text - Minimal styling
+            // Question text
             Text(
               question.text,
               style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                     fontSize: 12,
                     fontWeight: FontWeight.w500,
                     letterSpacing: 0.2,
-                    color: AppColors.textPrimary.withOpacity(0.9),
+                    color: AppColors.textPrimary.withOpacity(isLocked ? 0.6 : 0.9),
                   ),
             ),
             const SizedBox(height: 10),
-            // Toggle buttons with XP badges
-            Row(
-              children: [
-                // Yes Button with XP Badge
-                Expanded(
-                  child: _ToggleButtonWithXP(
-                    label: 'Evet',
-                    xp: question.yesPoints,
-                    isSelected: currentValue == true,
-                    onTap: () {
-                      // Toggle off if already selected, otherwise select Yes
-                      onChanged(currentValue == true ? null : true);
-                    },
+            
+            // Show locked message if match started and no prediction
+            if (isLocked && !hasUserPrediction)
+              Container(
+                padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
+                decoration: BoxDecoration(
+                  color: const Color(0xFF2A2D3A).withOpacity(0.5),
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(
+                    color: const Color(0xFF8E92A2).withOpacity(0.3),
+                    width: 1,
                   ),
                 ),
-                const SizedBox(width: 10),
-                // No Button with XP Badge
-                Expanded(
-                  child: _ToggleButtonWithXP(
-                    label: 'Hayır',
-                    xp: question.noPoints,
-                    isSelected: currentValue == false,
-                    onTap: () {
-                      // Toggle off if already selected, otherwise select No
-                      onChanged(currentValue == false ? null : false);
-                    },
-                  ),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Icon(
+                      Icons.lock_rounded,
+                      size: 16,
+                      color: const Color(0xFF8E92A2).withOpacity(0.8),
+                    ),
+                    const SizedBox(width: 8),
+                    Text(
+                      'Tahminlere Kapandı',
+                      style: TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w600,
+                        color: const Color(0xFF8E92A2).withOpacity(0.8),
+                      ),
+                    ),
+                  ],
                 ),
-              ],
-            ),
+              )
+            else
+              // Toggle buttons with XP badges
+              Row(
+                children: [
+                  // Yes Button with XP Badge
+                  Expanded(
+                    child: _ToggleButtonWithXP(
+                      label: 'Evet',
+                      xp: question.yesPoints,
+                      isSelected: isLocked 
+                          ? (userAnswer == 'EVET')
+                          : (currentValue == true),
+                      isLocked: isLocked,
+                      isUserChoice: isLocked && userAnswer == 'EVET',
+                      onTap: isLocked ? null : () {
+                        // Toggle off if already selected, otherwise select Yes
+                        onChanged(currentValue == true ? null : true);
+                      },
+                    ),
+                  ),
+                  const SizedBox(width: 10),
+                  // No Button with XP Badge
+                  Expanded(
+                    child: _ToggleButtonWithXP(
+                      label: 'Hayır',
+                      xp: question.noPoints,
+                      isSelected: isLocked 
+                          ? (userAnswer == 'HAYIR')
+                          : (currentValue == false),
+                      isLocked: isLocked,
+                      isUserChoice: isLocked && userAnswer == 'HAYIR',
+                      onTap: isLocked ? null : () {
+                        // Toggle off if already selected, otherwise select No
+                        onChanged(currentValue == false ? null : false);
+                      },
+                    ),
+                  ),
+                ],
+              ),
           ],
         ),
       ),
@@ -826,10 +990,10 @@ class _ScoreInput extends StatelessWidget {
 
 /// Circular flag/logo widget with minimalist styling
 class _CircularFlag extends StatelessWidget {
-  final String flagUrl;
+  final int teamId;
 
   const _CircularFlag({
-    required this.flagUrl,
+    required this.teamId,
   });
 
   @override
@@ -846,35 +1010,11 @@ class _CircularFlag extends StatelessWidget {
         ),
       ),
       child: ClipOval(
-        child: Image.network(
-          flagUrl,
-          width: 36,
-          height: 36,
+        child: CachedTeamLogoWidget(
+          teamId: teamId,
+          size: 36,
           fit: BoxFit.cover,
-          errorBuilder: (context, error, stackTrace) {
-            return Center(
-              child: Icon(
-                Icons.flag,
-                size: 18,
-                color: AppColors.textSecondary.withOpacity(0.5),
-              ),
-            );
-          },
-          loadingBuilder: (context, child, loadingProgress) {
-            if (loadingProgress == null) return child;
-            return Center(
-              child: SizedBox(
-                width: 16,
-                height: 16,
-                child: CircularProgressIndicator(
-                  strokeWidth: 2,
-                  valueColor: AlwaysStoppedAnimation<Color>(
-                    AppColors.textSecondary.withOpacity(0.3),
-                  ),
-                ),
-              ),
-            );
-          },
+          fallbackIconColor: AppColors.textSecondary.withOpacity(0.5),
         ),
       ),
     );
@@ -944,13 +1084,17 @@ class _ToggleButtonWithXP extends StatefulWidget {
   final String label;
   final int xp;
   final bool isSelected;
-  final VoidCallback onTap;
+  final bool isLocked;
+  final bool isUserChoice;
+  final VoidCallback? onTap;
 
   const _ToggleButtonWithXP({
     required this.label,
     required this.xp,
     required this.isSelected,
-    required this.onTap,
+    this.isLocked = false,
+    this.isUserChoice = false,
+    this.onTap,
   });
 
   @override
@@ -984,57 +1128,111 @@ class _ToggleButtonWithXPState extends State<_ToggleButtonWithXP>
   }
 
   void _handleTap() {
+    if (widget.isLocked || widget.onTap == null) return;
+    
     // Trigger pulse animation
     _pulseController.forward().then((_) {
       _pulseController.reverse();
     });
-    widget.onTap();
+    widget.onTap!();
   }
 
   @override
   Widget build(BuildContext context) {
     final isPositive = widget.xp >= 0;
     
+    // Determine colors based on locked state
+    Color borderColor;
+    Color backgroundColor;
+    Color textColor;
+    
+    if (widget.isLocked) {
+      if (widget.isUserChoice) {
+        // User's choice - show in green
+        borderColor = neonGreen.withOpacity(0.8);
+        backgroundColor = neonGreen.withOpacity(0.2);
+        textColor = neonGreen;
+      } else if (widget.isSelected) {
+        // Other option when locked
+        borderColor = Colors.white.withOpacity(0.1);
+        backgroundColor = darkGrey.withOpacity(0.2);
+        textColor = AppColors.textSecondary.withOpacity(0.4);
+      } else {
+        // Unselected and locked
+        borderColor = Colors.white.withOpacity(0.05);
+        backgroundColor = darkGrey.withOpacity(0.2);
+        textColor = AppColors.textSecondary.withOpacity(0.4);
+      }
+    } else {
+      // Not locked - normal interactive state
+      borderColor = widget.isSelected ? neonGreen.withOpacity(0.6) : Colors.white.withOpacity(0.05);
+      backgroundColor = widget.isSelected ? neonGreen.withOpacity(0.15) : darkGrey.withOpacity(0.4);
+      textColor = widget.isSelected ? neonGreen : AppColors.textSecondary.withOpacity(0.8);
+    }
+    
     return InkWell(
-      onTap: _handleTap,
+      onTap: widget.isLocked ? null : _handleTap,
       borderRadius: BorderRadius.circular(10),
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 200),
         curve: Curves.easeInOut,
         padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 10),
         decoration: BoxDecoration(
-          color: widget.isSelected ? neonGreen.withOpacity(0.15) : darkGrey.withOpacity(0.4),
+          color: backgroundColor,
           borderRadius: BorderRadius.circular(10),
           border: Border.all(
-            color: widget.isSelected ? neonGreen.withOpacity(0.6) : Colors.white.withOpacity(0.05),
+            color: borderColor,
             width: 1.5,
           ),
-          boxShadow: widget.isSelected
+          boxShadow: widget.isUserChoice
               ? [
                   BoxShadow(
-                    color: neonGreen.withOpacity(0.2),
-                    blurRadius: 6,
+                    color: neonGreen.withOpacity(0.3),
+                    blurRadius: 8,
                     offset: const Offset(0, 2),
                   ),
                 ]
-              : null,
+              : widget.isSelected && !widget.isLocked
+                  ? [
+                      BoxShadow(
+                        color: neonGreen.withOpacity(0.2),
+                        blurRadius: 6,
+                        offset: const Offset(0, 2),
+                      ),
+                    ]
+                  : null,
         ),
         child: Column(
           children: [
-            // Label
-            Text(
-              widget.label,
-              style: Theme.of(context).textTheme.labelLarge?.copyWith(
-                    color: widget.isSelected
-                        ? neonGreen
-                        : AppColors.textSecondary.withOpacity(0.8),
-                    fontWeight: FontWeight.w600,
-                    fontSize: 12,
-                    letterSpacing: 0.3,
+            // Label with checkmark for user choice
+            Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                if (widget.isUserChoice)
+                  Padding(
+                    padding: const EdgeInsets.only(right: 4),
+                    child: Icon(
+                      Icons.check_circle,
+                      size: 14,
+                      color: neonGreen,
+                    ),
                   ),
+                Flexible(
+                  child: Text(
+                    widget.label,
+                    style: Theme.of(context).textTheme.labelLarge?.copyWith(
+                          color: textColor,
+                          fontWeight: FontWeight.w600,
+                          fontSize: 12,
+                          letterSpacing: 0.3,
+                        ),
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ),
+              ],
             ),
             const SizedBox(height: 5),
-            // XP Badge with pulse animation - More minimal
+            // XP Badge with pulse animation
             ScaleTransition(
               scale: _pulseAnimation,
               child: Container(
@@ -1051,7 +1249,7 @@ class _ToggleButtonWithXPState extends State<_ToggleButtonWithXP>
                   boxShadow: [
                     BoxShadow(
                       color: (isPositive ? const Color(0xFF4CAF50) : const Color(0xFFFF6B6B))
-                          .withOpacity(0.2),
+                          .withOpacity(widget.isLocked ? 0.1 : 0.2),
                       blurRadius: 3,
                       offset: const Offset(0, 1),
                     ),
@@ -1063,22 +1261,22 @@ class _ToggleButtonWithXPState extends State<_ToggleButtonWithXP>
                     Icon(
                       isPositive ? Icons.arrow_upward : Icons.arrow_downward,
                       size: 9,
-                      color: Colors.white.withOpacity(0.95),
+                      color: Colors.white.withOpacity(widget.isLocked ? 0.6 : 0.95),
                     ),
                     const SizedBox(width: 3),
                     Text(
                       isPositive ? '+${widget.xp}' : '${widget.xp}',
-                      style: const TextStyle(
-                        color: Colors.white,
+                      style: TextStyle(
+                        color: Colors.white.withOpacity(widget.isLocked ? 0.6 : 1.0),
                         fontSize: 9,
                         fontWeight: FontWeight.w700,
                         letterSpacing: 0.3,
                       ),
                     ),
-                    const Text(
+                    Text(
                       ' XP',
                       style: TextStyle(
-                        color: Colors.white,
+                        color: Colors.white.withOpacity(widget.isLocked ? 0.6 : 1.0),
                         fontSize: 8,
                         fontWeight: FontWeight.w600,
                       ),
