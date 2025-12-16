@@ -23,6 +23,18 @@ class PocketBaseMatchRepository implements MatchRepository {
   // String? _currentUserId;
 
   @override
+  void setSelectedDate(DateTime date) {
+    // PocketBase implementation would filter by date in queries
+    // Not needed for now as we query on-demand
+  }
+
+  @override
+  void clearCache() {
+    // PocketBase doesn't cache locally by default
+    // Could implement if we add local caching layer
+  }
+
+  @override
   Future<List<MatchModel>> getMatches() async {
     // TODO: Implement PocketBase query
     // final records = await pb.collection('matches').getFullList();

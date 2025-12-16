@@ -9,6 +9,9 @@ import '../widgets/home_header.dart';
 import '../widgets/hero_carousel_enhanced.dart';
 import '../widgets/expandable_match_card.dart';
 import 'group_detail_screen.dart';
+import '../../../tournament/tournament_screen.dart';
+import 'package:provider/provider.dart';
+import '../../../tournament/tournament_provider.dart';
 
 /// Home screen displaying the World Cup Dashboard
 /// Features day-by-day fixture navigation with swipeable pages
@@ -195,16 +198,22 @@ class _HomeScreenState extends State<HomeScreen> {
       final currentDate = (repo as dynamic).selectedDate as DateTime;
       final nextDate = currentDate.add(const Duration(days: 1));
       
+      print('📅 Going to next day: ${DateFormat('dd/MM/yyyy').format(nextDate)}');
+      
       (repo as dynamic).setSelectedDate(nextDate);
       await _refreshMatchesQuietly();
       
-      // Reset page after rebuild
+      // Force UI update even if no matches
+      if (mounted) {
+        setState(() {
+          _currentPageIndex = 0;
+        });
+      }
+      
+      // Reset page after rebuild (if there are dates)
       if (_uniqueDates.isNotEmpty && mounted) {
         WidgetsBinding.instance.addPostFrameCallback((_) {
           if (_pageController.hasClients && mounted) {
-            setState(() {
-              _currentPageIndex = 0;
-            });
             _pageController.jumpToPage(0);
           }
         });
@@ -228,16 +237,22 @@ class _HomeScreenState extends State<HomeScreen> {
       final currentDate = (repo as dynamic).selectedDate as DateTime;
       final prevDate = currentDate.subtract(const Duration(days: 1));
       
+      print('📅 Going to previous day: ${DateFormat('dd/MM/yyyy').format(prevDate)}');
+      
       (repo as dynamic).setSelectedDate(prevDate);
       await _refreshMatchesQuietly();
       
-      // Reset page after rebuild
+      // Force UI update even if no matches
+      if (mounted) {
+        setState(() {
+          _currentPageIndex = 0;
+        });
+      }
+      
+      // Reset page after rebuild (if there are dates)
       if (_uniqueDates.isNotEmpty && mounted) {
         WidgetsBinding.instance.addPostFrameCallback((_) {
           if (_pageController.hasClients && mounted) {
-            setState(() {
-              _currentPageIndex = 0;
-            });
             _pageController.jumpToPage(0);
           }
         });
@@ -318,13 +333,37 @@ class _HomeScreenState extends State<HomeScreen> {
     }
   }
   
+  /// Get league logo path based on league name
+  String _getLeagueLogo(String leagueName) {
+    print('🏆 League Logo Request: "$leagueName"');
+    switch (leagueName) {
+      case 'Premier League':
+        return 'assets/images/league_logos/premier_league.png';
+      case 'Süper Lig':
+        return 'assets/images/league_logos/super_lig.png';
+      case 'Bundesliga':
+        return 'assets/images/league_logos/bundesliga.png';
+      case 'Serie A':
+        return 'assets/images/league_logos/serie_a.png';
+      case 'La Liga':
+        return 'assets/images/league_logos/la_liga.png';
+      case 'Ligue 1':
+        return 'assets/images/league_logos/ligue_1.png';
+      default:
+        print('⚠️ No logo found for: "$leagueName"');
+        return '';
+    }
+  }
+  
   Map<String, List<MatchModel>> _groupMatchesByGroup(List<MatchModel> matches) {
     final Map<String, List<MatchModel>> grouped = {};
     for (var match in matches) {
-      if (!grouped.containsKey(match.group)) {
-        grouped[match.group] = [];
+      // Prefer grouping by league/category when available (e.g., "Premier League").
+      final key = (match.category != null && match.category!.isNotEmpty) ? match.category! : match.group;
+      if (!grouped.containsKey(key)) {
+        grouped[key] = [];
       }
-      grouped[match.group]!.add(match);
+      grouped[key]!.add(match);
     }
     return grouped;
   }
@@ -403,7 +442,7 @@ class _HomeScreenState extends State<HomeScreen> {
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
               const CircularProgressIndicator(
-                color: Color(0xFF00E676), // Neon green
+                color: Color(0xFF0df259), // Neon green
               ),
               const SizedBox(height: 20),
               Text(
@@ -419,6 +458,28 @@ class _HomeScreenState extends State<HomeScreen> {
       );
     }
 
+    // Get the body content based on selected index
+    Widget bodyContent;
+    switch (_selectedBottomNavIndex) {
+      case 0:
+        bodyContent = _buildMatchesBody();
+        break;
+      case 1:
+        bodyContent = _buildGroupsBody();
+        break;
+      case 2:
+        bodyContent = _buildTournamentBody();
+        break;
+      case 3:
+        bodyContent = _buildLeaderboardBody();
+        break;
+      case 4:
+        bodyContent = _buildProfileBody();
+        break;
+      default:
+        bodyContent = _buildMatchesBody();
+    }
+
     return GestureDetector(
       // Dismiss keyboard when tapping outside
       onTap: () {
@@ -426,64 +487,205 @@ class _HomeScreenState extends State<HomeScreen> {
       },
       child: Scaffold(
         backgroundColor: AppColors.background,
-        body: Stack(
-          children: [
-            // Subtle star pattern background
-            Positioned.fill(
-              child: Opacity(
-                opacity: 0.03,
-                child: CustomPaint(
-                  painter: _StarPatternPainter(),
-                ),
-              ),
+        body: bodyContent,
+        bottomNavigationBar: BottomNavigationBar(
+          currentIndex: _selectedBottomNavIndex,
+          onTap: (index) {
+            setState(() {
+              _selectedBottomNavIndex = index;
+            });
+            debugPrint('📱 Bottom Nav tapped: $index');
+          },
+          type: BottomNavigationBarType.fixed,
+          backgroundColor: const Color(0xFF1A1A24),
+          selectedItemColor: const Color(0xFF0df259),
+          unselectedItemColor: Colors.white.withOpacity(0.4),
+          items: const [
+            BottomNavigationBarItem(
+              icon: Icon(Icons.sports_soccer),
+              label: 'Maçlar',
             ),
-            // Main content with CustomScrollView
-            SafeArea(
-              child: Column(
-                children: [
-                  // Header - Always visible at top
-                  const HomeHeader(),
-                  
-                  const SizedBox(height: 8),
-                  
-                  // Scrollable content
-                  Expanded(
-                    child: PageView.builder(
-                      controller: _pageController,
-                      onPageChanged: (index) {
-                        setState(() {
-                          _currentPageIndex = index;
-                        });
-                      },
-                      itemCount: _uniqueDates.length,
-                      itemBuilder: (context, pageIndex) {
-                        final date = _uniqueDates[pageIndex];
-                        final matchesOnDate = _matchesByDate[date] ?? [];
-                        
-                        if (matchesOnDate.isEmpty) {
-                          return _buildEmptyState();
-                        }
-                        
-                        // Group matches on this date by group name
-                        final groupedMatches = _groupMatchesByGroup(matchesOnDate);
-                        
-                        return _buildSliverScrollView(groupedMatches);
-                      },
-                    ),
-                  ),
-                ],
-              ),
+            BottomNavigationBarItem(
+              icon: Icon(Icons.group),
+              label: 'Gruplar',
+            ),
+            BottomNavigationBarItem(
+              icon: Icon(Icons.emoji_events),
+              label: 'Turnuva',
+            ),
+            BottomNavigationBarItem(
+              icon: Icon(Icons.bar_chart),
+              label: 'Liderlik',
+            ),
+            BottomNavigationBarItem(
+              icon: Icon(Icons.person),
+              label: 'Profil',
             ),
           ],
         ),
-        // Bottom Navigation Bar
-        bottomNavigationBar: _buildBottomNavigationBar(),
       ),
     );
   }
-  
+
+  Widget _buildMatchesBody() {
+    return Stack(
+      children: [
+        // Subtle star pattern background
+        Positioned.fill(
+          child: Opacity(
+            opacity: 0.03,
+            child: CustomPaint(
+              painter: _StarPatternPainter(),
+            ),
+          ),
+        ),
+        // Main content with CustomScrollView
+        SafeArea(
+          child: Column(
+            children: [
+              // Header - Always visible at top
+              const HomeHeader(),
+              
+              const SizedBox(height: 8),
+              
+              // Scrollable content
+              Expanded(
+                child: _uniqueDates.isEmpty
+                    ? _buildNoDataAtAllState()
+                    : PageView.builder(
+                        controller: _pageController,
+                        onPageChanged: (index) {
+                          setState(() {
+                            _currentPageIndex = index;
+                          });
+                        },
+                        itemCount: _uniqueDates.length,
+                        itemBuilder: (context, pageIndex) {
+                          final date = _uniqueDates[pageIndex];
+                          final matchesOnDate = _matchesByDate[date] ?? [];
+                          
+                          if (matchesOnDate.isEmpty) {
+                            return _buildEmptyState();
+                          }
+                          
+                          // Group matches on this date by group name
+                          final groupedMatches = _groupMatchesByGroup(matchesOnDate);
+                          
+                          return _buildSliverScrollView(groupedMatches);
+                        },
+                      ),
+              ),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildGroupsBody() {
+    return SafeArea(
+      child: Center(
+        child: Text('Gruplar - Çok Yakında', style: TextStyle(color: AppColors.textSecondary)),
+      ),
+    );
+  }
+
+  Widget _buildTournamentBody() {
+    return ChangeNotifierProvider(
+      create: (_) => TournamentProvider(),
+      child: const TournamentScreen(showAppBar: true),
+    );
+  }
+
+  Widget _buildLeaderboardBody() {
+    return SafeArea(
+      child: Center(
+        child: Text('Liderlik Tablosu - Çok Yakında', style: TextStyle(color: AppColors.textSecondary)),
+      ),
+    );
+  }
+
+  Widget _buildProfileBody() {
+    return SafeArea(
+      child: Center(
+        child: Text('Profil - Çok Yakında', style: TextStyle(color: AppColors.textSecondary)),
+      ),
+    );
+  }
+
   /// CustomScrollView with Sliver structure for smooth scrolling
   Widget _buildSliverScrollView(Map<String, List<MatchModel>> groupedMatches) {
+    // If no matches, show empty state within sliver
+    if (groupedMatches.isEmpty) {
+      return CustomScrollView(
+        controller: _scrollController,
+        slivers: [
+          SliverToBoxAdapter(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // Enhanced Hero Carousel (3-5 featured matches)
+                if (_heroMatches.isNotEmpty) ...[
+                  HeroCarouselEnhanced(
+                    heroMatches: _heroMatches,
+                    onMatchTap: _scrollToMatch,
+                  ),
+                  const SizedBox(height: 16),
+                ],
+                
+                // Compact Date Navigation - Right above "Günün Maçları"
+                _buildCompactDateNavigation(),
+                
+                const SizedBox(height: 8),
+                
+                // "Günün Maçları" Header
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 20),
+                  child: Row(
+                    children: [
+                      Icon(
+                        Icons.calendar_today_rounded,
+                        size: 20,
+                        color: const Color(0xFF00E676),
+                      ),
+                      const SizedBox(width: 8),
+                      Text(
+                        'Günün Maçları',
+                        style: TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.w700,
+                          color: Colors.white,
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Container(
+                          height: 1,
+                          decoration: BoxDecoration(
+                            gradient: LinearGradient(
+                              colors: [
+                                const Color(0xFF00E676).withOpacity(0.5),
+                                Colors.transparent,
+                              ],
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                
+                const SizedBox(height: 16),
+                
+                // Empty state message
+                _buildEmptyStateInline(),
+              ],
+            ),
+          ),
+        ],
+      );
+    }
+    
     return CustomScrollView(
       controller: _scrollController,
       slivers: [
@@ -492,11 +694,6 @@ class _HomeScreenState extends State<HomeScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // Compact Date Navigation
-              _buildCompactDateNavigation(),
-              
-              const SizedBox(height: 12),
-              
               // Enhanced Hero Carousel (3-5 featured matches)
               if (_heroMatches.isNotEmpty) ...[
                 HeroCarouselEnhanced(
@@ -505,6 +702,11 @@ class _HomeScreenState extends State<HomeScreen> {
                 ),
                 const SizedBox(height: 16),
               ],
+              
+              // Compact Date Navigation - Right above "Günün Maçları"
+              _buildCompactDateNavigation(),
+              
+              const SizedBox(height: 8),
               
               // "Günün Maçları" Header
               Padding(
@@ -543,7 +745,7 @@ class _HomeScreenState extends State<HomeScreen> {
                 ),
               ),
               
-              const SizedBox(height: 16),
+              const SizedBox(height: 8),
             ],
           ),
         ),
@@ -560,9 +762,9 @@ class _HomeScreenState extends State<HomeScreen> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    // Group Header
+                    // Group Header - Minimal SofaScore Style
                     Padding(
-                      padding: EdgeInsets.only(bottom: 12, top: index == 0 ? 0 : 8),
+                      padding: EdgeInsets.only(bottom: 4, top: index == 0 ? 0 : 6),
                       child: InkWell(
                         onTap: () {
                           Navigator.push(
@@ -570,51 +772,60 @@ class _HomeScreenState extends State<HomeScreen> {
                             MaterialPageRoute(
                               builder: (context) => GroupDetailScreen(
                                 groupName: groupName,
-                                matches: groupMatches,
                               ),
                             ),
                           );
                         },
-                        borderRadius: BorderRadius.circular(12),
+                        borderRadius: BorderRadius.circular(6),
                         child: Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                           decoration: BoxDecoration(
-                            gradient: LinearGradient(
-                              colors: [
-                                const Color(0xFF00E676).withOpacity(0.15),
-                                const Color(0xFF00B8D4).withOpacity(0.10),
-                              ],
-                              begin: Alignment.centerLeft,
-                              end: Alignment.centerRight,
-                            ),
-                            borderRadius: BorderRadius.circular(12),
-                            border: Border.all(
-                              color: const Color(0xFF00E676).withOpacity(0.3),
-                              width: 1,
-                            ),
+                            color: const Color(0xFF1A1A1A).withOpacity(0.6),
+                            borderRadius: BorderRadius.circular(6),
                           ),
                           child: Row(
                             children: [
-                              Icon(
-                                Icons.emoji_events_rounded,
-                                size: 18,
-                                color: const Color(0xFF00E676),
-                              ),
-                              const SizedBox(width: 8),
+                              // League Logo (Local Asset)
+                              _getLeagueLogo(groupName).isNotEmpty
+                                ? ClipRRect(
+                                    borderRadius: BorderRadius.circular(2),
+                                    child: Image.asset(
+                                      _getLeagueLogo(groupName),
+                                      width: 16,
+                                      height: 16,
+                                      fit: BoxFit.contain,
+                                      errorBuilder: (context, error, stackTrace) {
+                                        print('❌ ERROR loading logo for "$groupName": $error');
+                                        print('   Path: ${_getLeagueLogo(groupName)}');
+                                        return Icon(
+                                          Icons.emoji_events_rounded,
+                                          size: 14,
+                                          color: const Color(0xFF00E676).withOpacity(0.8),
+                                        );
+                                      },
+                                    ),
+                                  )
+                                : Icon(
+                                    Icons.emoji_events_rounded,
+                                    size: 14,
+                                    color: const Color(0xFF00E676).withOpacity(0.8),
+                                  ),
+                              const SizedBox(width: 6),
                               Expanded(
                                 child: Text(
                                   groupName,
                                   style: const TextStyle(
-                                    fontSize: 15,
-                                    fontWeight: FontWeight.w700,
-                                    color: Colors.white,
+                                    fontSize: 12,
+                                    fontWeight: FontWeight.w600,
+                                    color: Color(0xFFB0B0B0),
+                                    letterSpacing: 0.2,
                                   ),
                                 ),
                               ),
                               Icon(
                                 Icons.chevron_right,
-                                size: 20,
-                                color: const Color(0xFF00E676).withOpacity(0.7),
+                                size: 16,
+                                color: const Color(0xFF666666),
                               ),
                             ],
                           ),
@@ -628,7 +839,7 @@ class _HomeScreenState extends State<HomeScreen> {
                       final match = entry.value;
                       return Padding(
                         padding: EdgeInsets.only(
-                          bottom: matchIndex == groupMatches.length - 1 ? 16 : 12,
+                          bottom: matchIndex == groupMatches.length - 1 ? 2 : 6,
                         ),
                         child: ExpandableMatchCard(
                           key: _matchKeys[match.id], // Use GlobalKey for state preservation
@@ -669,11 +880,11 @@ class _HomeScreenState extends State<HomeScreen> {
     final weekday = _getWeekday(currentDate);
     
     return Container(
-      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 2),
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
       decoration: BoxDecoration(
         color: Colors.white.withOpacity(0.05),
-        borderRadius: BorderRadius.circular(10),
+        borderRadius: BorderRadius.circular(8),
         border: Border.all(
           color: Colors.white.withOpacity(0.1),
           width: 1,
@@ -687,10 +898,10 @@ class _HomeScreenState extends State<HomeScreen> {
             icon: const Icon(
               Icons.chevron_left,
               color: Color(0xFF00E676),
-              size: 20,
+              size: 18,
             ),
             padding: EdgeInsets.zero,
-            constraints: const BoxConstraints(minWidth: 30, minHeight: 30),
+            constraints: const BoxConstraints(minWidth: 28, minHeight: 28),
             onPressed: _goToPreviousDay,
           ),
           
@@ -706,7 +917,7 @@ class _HomeScreenState extends State<HomeScreen> {
                     child: Text(
                       currentDate,
                       style: const TextStyle(
-                        fontSize: 13,
+                        fontSize: 12,
                         fontWeight: FontWeight.w600,
                         color: Colors.white,
                         letterSpacing: 0.2,
@@ -714,20 +925,20 @@ class _HomeScreenState extends State<HomeScreen> {
                       overflow: TextOverflow.ellipsis,
                     ),
                   ),
-                  const SizedBox(width: 6),
+                  const SizedBox(width: 5),
                   Text(
                     weekday,
                     style: TextStyle(
-                      fontSize: 11,
+                      fontSize: 10,
                       fontWeight: FontWeight.w500,
                       color: const Color(0xFF00E676),
                       letterSpacing: 0.2,
                     ),
                   ),
-                  const SizedBox(width: 4),
+                  const SizedBox(width: 3),
                   Icon(
                     Icons.calendar_today,
-                    size: 12,
+                    size: 11,
                     color: const Color(0xFF00E676).withOpacity(0.7),
                   ),
                 ],
@@ -740,10 +951,10 @@ class _HomeScreenState extends State<HomeScreen> {
             icon: const Icon(
               Icons.chevron_right,
               color: Color(0xFF00E676),
-              size: 20,
+              size: 18,
             ),
             padding: EdgeInsets.zero,
-            constraints: const BoxConstraints(minWidth: 30, minHeight: 30),
+            constraints: const BoxConstraints(minWidth: 28, minHeight: 28),
             onPressed: _goToNextDay,
           ),
         ],
@@ -751,101 +962,353 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
   
-  Widget _buildBottomNavigationBar() {
-    return Container(
-      decoration: BoxDecoration(
-        color: const Color(0xFF1A1A24),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.3),
-            blurRadius: 15,
-            offset: const Offset(0, -3),
-          ),
-        ],
-      ),
-      child: SafeArea(
-        top: false,
-        child: Container(
-          height: 56,
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.spaceAround,
-            children: [
-              _buildBottomNavItem(
-                icon: Icons.home_rounded,
-                label: 'Ana Sayfa',
-                index: 0,
-              ),
-              _buildBottomNavItem(
-                icon: Icons.calendar_today_rounded,
-                label: 'Bülten',
-                index: 1,
-              ),
-              _buildBottomNavItem(
-                icon: Icons.fact_check_rounded,
-                label: 'Tahminlerim',
-                index: 2,
-              ),
-              _buildBottomNavItem(
-                icon: Icons.person_rounded,
-                label: 'Profil',
-                index: 3,
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-  
-  Widget _buildBottomNavItem({
-    required IconData icon,
-    required String label,
-    required int index,
-  }) {
-    final isSelected = _selectedBottomNavIndex == index;
+  /// State when no data at all from API (all leagues filtered out)
+  Widget _buildNoDataAtAllState() {
+    // Get the current selected date from repository
+    String displayDate;
+    final repo = _matchRepository;
     
-    return Expanded(
-      child: InkWell(
-        onTap: () {
-          setState(() {
-            _selectedBottomNavIndex = index;
-          });
-          debugPrint('📱 Bottom Nav tapped: $label (index: $index)');
-        },
-        borderRadius: BorderRadius.circular(10),
-        child: Container(
-          padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 4),
+    if (repo.runtimeType.toString().contains('SofaScore')) {
+      final selectedDate = (repo as dynamic).selectedDate as DateTime;
+      displayDate = DateFormat('d/M/yyyy').format(selectedDate);
+    } else {
+      displayDate = DateFormat('d/M/yyyy').format(DateTime.now());
+    }
+    
+    return CustomScrollView(
+      slivers: [
+        SliverToBoxAdapter(
           child: Column(
-            mainAxisSize: MainAxisSize.min,
             children: [
-              Icon(
-                icon,
-                color: isSelected
-                    ? const Color(0xFF00E676)
-                    : Colors.white.withOpacity(0.4),
-                size: 20,
-              ),
-              const SizedBox(height: 2),
-              Text(
-                label,
-                style: TextStyle(
-                  color: isSelected
-                      ? const Color(0xFF00E676)
-                      : Colors.white.withOpacity(0.4),
-                  fontSize: 8,
-                  fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
+              const SizedBox(height: 20),
+              
+              // Show current selected date
+              Container(
+                margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 2),
+                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                decoration: BoxDecoration(
+                  color: Colors.white.withOpacity(0.05),
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(
+                    color: Colors.white.withOpacity(0.1),
+                    width: 1,
+                  ),
                 ),
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Icon(
+                      Icons.calendar_today,
+                      size: 14,
+                      color: const Color(0xFF00E676).withOpacity(0.7),
+                    ),
+                    const SizedBox(width: 8),
+                    Text(
+                      displayDate,
+                      style: const TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w600,
+                        color: Colors.white,
+                        letterSpacing: 0.2,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              
+              const SizedBox(height: 8),
+              
+              // "Günün Maçları" Header
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 20),
+                child: Row(
+                  children: [
+                    Icon(
+                      Icons.calendar_today_rounded,
+                      size: 20,
+                      color: const Color(0xFF00E676),
+                    ),
+                    const SizedBox(width: 8),
+                    Text(
+                      'Günün Maçları',
+                      style: TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.w700,
+                        color: Colors.white,
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Container(
+                        height: 1,
+                        decoration: BoxDecoration(
+                          gradient: LinearGradient(
+                            colors: [
+                              const Color(0xFF00E676).withOpacity(0.5),
+                              Colors.transparent,
+                            ],
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              
+              const SizedBox(height: 16),
+              
+              // Empty state message
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 40),
+                child: Container(
+                  padding: const EdgeInsets.all(32),
+                  decoration: BoxDecoration(
+                    color: Colors.white.withOpacity(0.03),
+                    borderRadius: BorderRadius.circular(16),
+                    border: Border.all(
+                      color: Colors.white.withOpacity(0.08),
+                      width: 1,
+                    ),
+                  ),
+                  child: Column(
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.all(20),
+                        decoration: BoxDecoration(
+                          color: Colors.white.withOpacity(0.05),
+                          shape: BoxShape.circle,
+                        ),
+                        child: Icon(
+                          Icons.event_busy_rounded,
+                          size: 48,
+                          color: const Color(0xFF00E676).withOpacity(0.5),
+                        ),
+                      ),
+                      const SizedBox(height: 20),
+                      Text(
+                        'Bu Tarihte Maç Yok',
+                        style: TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.w700,
+                          color: Colors.white.withOpacity(0.8),
+                        ),
+                        textAlign: TextAlign.center,
+                      ),
+                      const SizedBox(height: 8),
+                      Text(
+                        'Takip edilen liglerde bu tarih için\nmaç bulunmuyor.',
+                        style: TextStyle(
+                          fontSize: 13,
+                          color: Colors.white.withOpacity(0.4),
+                          height: 1.5,
+                        ),
+                        textAlign: TextAlign.center,
+                      ),
+                      const SizedBox(height: 24),
+                      Row(
+                        children: [
+                          Expanded(
+                            child: OutlinedButton(
+                              onPressed: _goToPreviousDay,
+                              style: OutlinedButton.styleFrom(
+                                foregroundColor: Colors.white.withOpacity(0.7),
+                                side: BorderSide(
+                                  color: Colors.white.withOpacity(0.1),
+                                ),
+                                padding: const EdgeInsets.symmetric(vertical: 12),
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(8),
+                                ),
+                              ),
+                              child: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  const Icon(Icons.arrow_back, size: 16),
+                                  const SizedBox(width: 4),
+                                  const Text(
+                                    'Önceki',
+                                    style: TextStyle(fontSize: 10),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            flex: 2,
+                            child: ElevatedButton.icon(
+                              onPressed: _loadMatches,
+                              icon: const Icon(Icons.refresh, size: 18),
+                              label: const Text('Yenile'),
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: const Color(0xFF00E676).withOpacity(0.15),
+                                foregroundColor: const Color(0xFF00E676),
+                                elevation: 0,
+                                padding: const EdgeInsets.symmetric(vertical: 12),
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(8),
+                                  side: BorderSide(
+                                    color: const Color(0xFF00E676).withOpacity(0.3),
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: OutlinedButton(
+                              onPressed: _goToNextDay,
+                              style: OutlinedButton.styleFrom(
+                                foregroundColor: Colors.white.withOpacity(0.7),
+                                side: BorderSide(
+                                  color: Colors.white.withOpacity(0.1),
+                                ),
+                                padding: const EdgeInsets.symmetric(vertical: 12),
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(8),
+                                ),
+                              ),
+                              child: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  const Text(
+                                    'Sonraki',
+                                    style: TextStyle(fontSize: 10),
+                                  ),
+                                  const SizedBox(width: 4),
+                                  const Icon(Icons.arrow_forward, size: 16),
+                                ],
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
               ),
             ],
           ),
         ),
-      ),
+      ],
     );
   }
   
+  /// Inline empty state for when there are no matches
+  Widget _buildEmptyStateInline() {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 40),
+      child: Container(
+        padding: const EdgeInsets.all(32),
+        decoration: BoxDecoration(
+          color: Colors.white.withOpacity(0.03),
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(
+            color: Colors.white.withOpacity(0.08),
+            width: 1,
+          ),
+        ),
+        child: Column(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(20),
+              decoration: BoxDecoration(
+                color: Colors.white.withOpacity(0.05),
+                shape: BoxShape.circle,
+              ),
+              child: Icon(
+                Icons.event_busy_rounded,
+                size: 48,
+                color: const Color(0xFF00E676).withOpacity(0.5),
+              ),
+            ),
+            const SizedBox(height: 20),
+            Text(
+              'Bu Tarihte Maç Yok',
+              style: TextStyle(
+                fontSize: 18,
+                fontWeight: FontWeight.w700,
+                color: Colors.white.withOpacity(0.8),
+              ),
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: 8),
+            Text(
+              'Takip edilen liglerde bu tarih için\nmaç bulunmuyor.',
+              style: TextStyle(
+                fontSize: 13,
+                color: Colors.white.withOpacity(0.4),
+                height: 1.5,
+              ),
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: 24),
+            Row(
+              children: [
+                Expanded(
+                  child: OutlinedButton.icon(
+                    onPressed: _goToPreviousDay,
+                    icon: const Icon(Icons.arrow_back, size: 18),
+                    label: const Text('Önceki'),
+                    style: OutlinedButton.styleFrom(
+                      foregroundColor: Colors.white.withOpacity(0.7),
+                      side: BorderSide(
+                        color: Colors.white.withOpacity(0.1),
+                      ),
+                      padding: const EdgeInsets.symmetric(vertical: 12),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  flex: 2,
+                  child: ElevatedButton.icon(
+                    onPressed: _showDatePicker,
+                    icon: const Icon(Icons.calendar_today, size: 18),
+                    label: const Text('Tarih Seç'),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: const Color(0xFF00E676).withOpacity(0.15),
+                      foregroundColor: const Color(0xFF00E676),
+                      elevation: 0,
+                      padding: const EdgeInsets.symmetric(vertical: 12),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(8),
+                        side: BorderSide(
+                          color: const Color(0xFF00E676).withOpacity(0.3),
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: OutlinedButton.icon(
+                    onPressed: _goToNextDay,
+                    icon: const Icon(Icons.arrow_forward, size: 18),
+                    label: const Text('Sonraki'),
+                    style: OutlinedButton.styleFrom(
+                      foregroundColor: Colors.white.withOpacity(0.7),
+                      side: BorderSide(
+                        color: Colors.white.withOpacity(0.1),
+                      ),
+                      padding: const EdgeInsets.symmetric(vertical: 12),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
   Widget _buildEmptyState() {
     return Center(
       child: Padding(
@@ -1010,5 +1473,5 @@ class _StarPatternPainter extends CustomPainter {
   }
 
   @override
-  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
+  bool shouldRepaint(covariant _StarPatternPainter oldDelegate) => false;
 }

@@ -338,16 +338,28 @@ class _HeroMatchCardState extends State<HeroMatchCard> {
       child: InkWell(
         onTap: () {
           setState(() {
-            _selectedAnswer = value;
+            // Toggle: if the same answer is tapped again, clear selection
+            if (_selectedAnswer == value) {
+              _selectedAnswer = null;
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  content: Text('❌ Seçiminiz iptal edildi'),
+                  duration: const Duration(seconds: 1),
+                  backgroundColor: Colors.grey[850],
+                ),
+              );
+            } else {
+              _selectedAnswer = value;
+              debugPrint('🎯 Günün Sorusu Cevabı: $label');
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  content: Text('✅ Cevabınız kaydedildi: $label (+50 Puan)'),
+                  duration: const Duration(seconds: 2),
+                  backgroundColor: const Color(0xFFFFD700),
+                ),
+              );
+            }
           });
-          debugPrint('🎯 Günün Sorusu Cevabı: $label');
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text('✅ Cevabınız kaydedildi: $label (+50 Puan)'),
-              duration: const Duration(seconds: 2),
-              backgroundColor: const Color(0xFFFFD700),
-            ),
-          );
         },
         borderRadius: BorderRadius.circular(8),
         child: Container(

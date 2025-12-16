@@ -249,6 +249,7 @@ class SofaScoreRepository implements MatchRepository {
               awayScore: matches[i].awayScore,
               isLive: matches[i].isLive,
               liveMatchTime: matches[i].liveMatchTime,
+              status: matches[i].status, // ✅ Keep status!
               isHero: true, // ⭐ Mark as hero!
               isFavorite: matches[i].isFavorite,
               questions: matches[i].questions,

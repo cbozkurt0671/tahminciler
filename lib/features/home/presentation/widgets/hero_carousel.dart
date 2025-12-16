@@ -111,7 +111,8 @@ class _HeroCarouselState extends State<HeroCarousel> {
               final match = widget.heroMatches[index];
               return Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 8),
-                child: _buildEnhancedHeroCard(match, index),
+                // Use compact hero card implementation available in this file
+                child: _buildCompactHeroCard(match),
               );
             },
           ),
@@ -120,7 +121,7 @@ class _HeroCarouselState extends State<HeroCarousel> {
         const SizedBox(height: 12),
         
         // Page indicator dots
-        if (widget.heroMatches.length > 1) _buildPageIndicator(),
+        if (widget.heroMatches.length > 1) _buildDotsIndicator(),
       ],
     );
   }

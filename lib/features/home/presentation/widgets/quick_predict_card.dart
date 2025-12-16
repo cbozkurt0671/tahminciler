@@ -84,9 +84,12 @@ class _QuickPredictCardState extends State<QuickPredictCard> {
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
             child: Column(
               children: [
-                // Main row with teams and score inputs
-                Row(
-                  children: [
+                // Main row with teams and score inputs (fixed height to vertically center inputs)
+                SizedBox(
+                  height: 68,
+                  child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.center,
+                    children: [
                     // Home Team
                     Expanded(
                       flex: 2,
@@ -215,15 +218,15 @@ class _ScoreInput extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      width: 45,
-      height: 45,
+      width: 40,
+      height: 35,
       decoration: BoxDecoration(
-        color: const Color(0xFF121219),
-        borderRadius: BorderRadius.circular(10),
+        color: Colors.white.withOpacity(0.1),
+        borderRadius: BorderRadius.circular(8),
         border: Border.all(
-          color: focusNode.hasFocus 
-              ? AppColors.gradientBlue 
-              : AppColors.textSecondary.withOpacity(0.2),
+          color: focusNode.hasFocus
+              ? Colors.white.withOpacity(0.6)
+              : Colors.white.withOpacity(0.3),
           width: focusNode.hasFocus ? 2 : 1,
         ),
       ),
@@ -231,11 +234,13 @@ class _ScoreInput extends StatelessWidget {
         controller: controller,
         focusNode: focusNode,
         textAlign: TextAlign.center,
+        textAlignVertical: TextAlignVertical.center,
         keyboardType: TextInputType.number,
         maxLength: 1,
         style: Theme.of(context).textTheme.titleLarge?.copyWith(
           fontWeight: FontWeight.w700,
-          color: AppColors.textPrimary,
+          color: Colors.white,
+          fontSize: 16,
         ),
         inputFormatters: [
           FilteringTextInputFormatter.digitsOnly,
@@ -244,6 +249,7 @@ class _ScoreInput extends StatelessWidget {
         decoration: const InputDecoration(
           border: InputBorder.none,
           counterText: '',
+          isDense: true,
           contentPadding: EdgeInsets.zero,
         ),
       ),

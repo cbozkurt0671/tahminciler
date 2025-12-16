@@ -26,6 +26,8 @@ class MatchModel {
   final bool isFavorite;
   final List<PredictionQuestion> questions;
   final Map<String, String> userPredictions; // questionId -> answer (e.g., "q1" -> "EVET")
+  final int? userPredictedHomeScore; // User's predicted home score
+  final int? userPredictedAwayScore; // User's predicted away score
 
   MatchModel({
     required this.id,
@@ -52,6 +54,8 @@ class MatchModel {
     this.isFavorite = false,
     this.questions = const [],
     this.userPredictions = const {},
+    this.userPredictedHomeScore,
+    this.userPredictedAwayScore,
   });
 
   /// Returns formatted current score (e.g., "2 - 1")
@@ -76,6 +80,8 @@ class MatchModel {
     String? liveMatchTime,
     String? status,
     Map<String, String>? userPredictions,
+    int? userPredictedHomeScore,
+    int? userPredictedAwayScore,
   }) {
     return MatchModel(
       id: id,
@@ -102,6 +108,8 @@ class MatchModel {
       isFavorite: isFavorite ?? this.isFavorite,
       questions: questions ?? this.questions,
       userPredictions: userPredictions ?? this.userPredictions,
+      userPredictedHomeScore: userPredictedHomeScore ?? this.userPredictedHomeScore,
+      userPredictedAwayScore: userPredictedAwayScore ?? this.userPredictedAwayScore,
     );
   }
 }

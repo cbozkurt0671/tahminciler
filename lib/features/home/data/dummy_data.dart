@@ -11,19 +11,21 @@ class DummyMatchData {
       // DAY 1: June 12, 2026 (Opening Day)
       // ============================================
       
-      // Live Match 1 - USA Opening Match (HERO)
+      // Live Match 1 - Manchester City vs Liverpool (HERO)
       MatchModel(
         id: '1',
-        homeTeam: 'ABD',
-        awayTeam: 'Meksika',
+        homeTeam: 'Manchester City',
+        awayTeam: 'Liverpool',
+        homeTeamId: 17,  // Man City
+        awayTeamId: 20,  // Liverpool
         homeFlagUrl: 'https://flagcdn.com/h80/us.png',
         awayFlagUrl: 'https://flagcdn.com/h80/mx.png',
         matchTime: '45:00',
         matchDate: '12 Haz, 2026',
-        city: 'Los Angeles',
-        stadium: 'SoFi Stadium',
-        group: 'A Grubu',
-        category: 'World Cup 2026',
+        city: 'Manchester',
+        stadium: 'Etihad Stadium',
+        group: 'Premier League',
+        category: 'Premier League',
         isLive: true,
         liveMatchTime: "67'", // Changed to actual minute
         status: 'inprogress',
@@ -74,15 +76,17 @@ class DummyMatchData {
       // Match 2 - June 12
       MatchModel(
         id: '2',
-        homeTeam: 'Kanada',
-        awayTeam: 'İrlanda',
+        homeTeam: 'Arsenal',
+        awayTeam: 'Chelsea',
+        homeTeamId: 21,  // Arsenal
+        awayTeamId: 19,  // Chelsea
         homeFlagUrl: 'https://flagcdn.com/h80/ca.png',
         awayFlagUrl: 'https://flagcdn.com/h80/ie.png',
         matchTime: '16:00',
         matchDate: '12 Haz, 2026',
-        city: 'Toronto',
-        stadium: 'BMO Field',
-        group: 'B Grubu',
+        city: 'London',
+        stadium: 'Emirates Stadium',
+        group: 'Premier League',
         isLive: false,
         isFavorite: false,
         questions: [
@@ -122,15 +126,17 @@ class DummyMatchData {
       // Match 3 - June 12 (HERO - Live)
       MatchModel(
         id: '3',
-        homeTeam: 'Brezilya',
-        awayTeam: 'Japonya',
+        homeTeam: 'Barcelona',
+        awayTeam: 'Real Madrid',
+        homeTeamId: 2829,  // Barcelona
+        awayTeamId: 2817,  // Real Madrid
         homeFlagUrl: 'https://flagcdn.com/h80/br.png',
         awayFlagUrl: 'https://flagcdn.com/h80/jp.png',
         matchTime: '68:30',
         matchDate: '12 Haz, 2026',
-        city: 'Miami',
-        stadium: 'Hard Rock Stadium',
-        group: 'C Grubu',
+        city: 'Barcelona',
+        stadium: 'Camp Nou',
+        group: 'La Liga',
         isLive: true,
         isFavorite: false,
         isHero: true,
@@ -175,13 +181,15 @@ class DummyMatchData {
       // Match 4 - June 12
       MatchModel(
         id: '4',
-        homeTeam: 'Fransa',
-        awayTeam: 'Avustralya',
+        homeTeam: 'Bayern Munich',
+        awayTeam: 'Borussia Dortmund',
+        homeTeamId: 2672,  // Bayern
+        awayTeamId: 2673,  // Dortmund
         homeFlagUrl: 'https://flagcdn.com/h80/fr.png',
         awayFlagUrl: 'https://flagcdn.com/h80/au.png',
         matchTime: '19:00',
         matchDate: '12 Haz, 2026',
-        city: 'Dallas',
+        city: 'Munich',
         stadium: 'AT&T Stadium',
         group: 'D Grubu',
         isLive: false,
@@ -223,13 +231,15 @@ class DummyMatchData {
       // Match 5 - June 12
       MatchModel(
         id: '5',
-        homeTeam: 'İspanya',
-        awayTeam: 'Kosta Rika',
+        homeTeam: 'Juventus',
+        awayTeam: 'Inter Milan',
+        homeTeamId: 2697,  // Juventus
+        awayTeamId: 2692,  // Inter
         homeFlagUrl: 'https://flagcdn.com/h80/es.png',
         awayFlagUrl: 'https://flagcdn.com/h80/cr.png',
         matchTime: '22:00',
         matchDate: '12 Haz, 2026',
-        city: 'Houston',
+        city: 'Turin',
         stadium: 'NRG Stadium',
         group: 'E Grubu',
         isLive: false,
@@ -275,8 +285,10 @@ class DummyMatchData {
       // Match 6 - June 13 (HERO - Live)
       MatchModel(
         id: '6',
-        homeTeam: 'Arjantin',
-        awayTeam: 'Güney Kore',
+        homeTeam: 'PSG',
+        awayTeam: 'Manchester United',
+        homeTeamId: 1644,  // PSG
+        awayTeamId: 18,    // Man United
         homeFlagUrl: 'https://flagcdn.com/h80/ar.png',
         awayFlagUrl: 'https://flagcdn.com/h80/kr.png',
         matchTime: '22:15',

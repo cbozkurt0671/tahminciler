@@ -12,6 +12,17 @@ class MockMatchRepository implements MatchRepository {
   final Map<String, bool> _favorites = {};
 
   @override
+  void setSelectedDate(DateTime date) {
+    // Mock repository doesn't need to fetch by date
+    // It returns all dummy data
+  }
+
+  @override
+  void clearCache() {
+    // Mock repository doesn't cache
+  }
+
+  @override
   Future<List<MatchModel>> getMatches() async {
     // Simulate network delay
     await Future.delayed(const Duration(milliseconds: 100));

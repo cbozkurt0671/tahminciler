@@ -5,6 +5,12 @@ import '../../data/models/group_standing.dart';
 /// This allows us to swap between different data sources (Mock, PocketBase, Firebase, etc.)
 /// without changing any UI code
 abstract class MatchRepository {
+  /// Set the date to fetch matches for (used by SofaScore API)
+  void setSelectedDate(DateTime date);
+  
+  /// Clear cached data
+  void clearCache();
+  
   /// Get all matches
   Future<List<MatchModel>> getMatches();
 

@@ -98,19 +98,6 @@ class _SocialScreenState extends State<SocialScreen> with SingleTickerProviderSt
                 _buildGlobalLeaderboardTab(),
               ],
             ),
-      floatingActionButton: FloatingActionButton.extended(
-        onPressed: _showCreateJoinDialog,
-        backgroundColor: const Color(0xFF00E676),
-        icon: const Icon(Icons.add, color: Colors.black),
-        label: Text(
-          'OLUŞTUR / KATIL',
-          style: GoogleFonts.audiowide(
-            color: Colors.black,
-            fontSize: 12,
-            fontWeight: FontWeight.bold,
-          ),
-        ),
-      ),
     );
   }
 
