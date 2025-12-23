@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../data/models/user_entity.dart';
 import '../../../../core/service_locator.dart';
-import '../../domain/repositories/auth_repository.dart';
 
 /// FIFA Ultimate Team-style profile screen
 class ProfileScreen extends StatefulWidget {

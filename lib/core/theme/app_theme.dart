@@ -19,11 +19,9 @@ class AppTheme {
         primary: AppColors.primary,
         secondary: AppColors.gradientGreen,
         surface: AppColors.cardSurface,
-        background: AppColors.background,
         onPrimary: AppColors.background,
         onSecondary: AppColors.background,
         onSurface: AppColors.textPrimary,
-        onBackground: AppColors.textPrimary,
       ),
 
       // Typography - Lexend Font Family

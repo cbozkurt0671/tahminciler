@@ -12,7 +12,7 @@ class BetaAvatar extends StatelessWidget {
   final bool verified;
 
   const BetaAvatar({
-    Key? key,
+    super.key,
     this.imagePath,
     this.size = 40,
   this.initials,
@@ -20,7 +20,7 @@ class BetaAvatar extends StatelessWidget {
     this.borderColor = const Color(0xFF0df259),
     this.borderWidth = 2.0,
     this.verified = false,
-  }) : super(key: key);
+  });
 
   @override
   Widget build(BuildContext context) {

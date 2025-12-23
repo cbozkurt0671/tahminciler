@@ -32,7 +32,7 @@ class Group {
       members: (json['members'] as List<dynamic>?)?.map((e) => Member.fromJson(e as Map<String, dynamic>)).toList() ?? [],
       podium: (json['podium'] as List<dynamic>?)?.map((e) => Member.fromJson(e as Map<String, dynamic>)).toList() ?? [],
       leaderboard: (json['leaderboard'] as List<dynamic>?)?.map((e) => Member.fromJson(e as Map<String, dynamic>)).toList() ?? [],
-      stats: (json['stats'] as Map<String, dynamic>?)?.map((k, v) => MapEntry(k as String, v.toString())) ?? {},
+      stats: (json['stats'] as Map<String, dynamic>?)?.map((k, v) => MapEntry(k, v.toString())) ?? {},
       recentMessage: json['recentMessage'] as String? ?? '',
     );
   }

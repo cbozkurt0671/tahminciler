@@ -333,7 +333,7 @@ class _StatCard extends StatelessWidget {
   final IconData icon;
   final Color accent;
   final bool neon;
-  const _StatCard({required this.label, required this.value, required this.icon, required this.accent, this.neon = false});
+  const _StatCard({required this.label, required this.value, required this.icon, required this.accent, bool? neon}) : neon = neon ?? false;
   @override
   Widget build(BuildContext context) {
     return Container(
@@ -392,7 +392,7 @@ class _StatCard extends StatelessWidget {
 // --- Podium Section ---
 class _PodiumSection extends StatelessWidget {
   final List<Member>? podium;
-  const _PodiumSection({this.podium});
+  const _PodiumSection({List<Member>? podium}) : podium = podium;
   @override
   Widget build(BuildContext context) {
     final p = podium != null && podium!.length >= 3
@@ -784,7 +784,7 @@ class _LeaderboardRow extends StatelessWidget {
 // --- Floating Bottom Bar ---
 class _FloatingBottomBar extends StatelessWidget {
   final String? recentMessage;
-  const _FloatingBottomBar({this.recentMessage});
+  const _FloatingBottomBar({String? recentMessage}) : recentMessage = recentMessage;
   @override
   Widget build(BuildContext context) {
     return Positioned(

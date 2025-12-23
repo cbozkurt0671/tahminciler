@@ -1,6 +1,5 @@
 import 'dart:math';
 import 'package:flutter/material.dart';
-import '../../../../core/theme/app_colors.dart';
 import '../../../../core/utils/image_loader.dart';
 import '../../data/models/match_model.dart';
 
@@ -317,7 +316,7 @@ class _HeroCarouselState extends State<HeroCarousel> {
             right: 0,
             child: Center(
               child: Text(
-                match.city?.toUpperCase() ?? '',
+                match.city.toUpperCase() ?? '',
                 style: TextStyle(
                   color: Colors.white.withOpacity(0.4),
                   fontSize: 9,

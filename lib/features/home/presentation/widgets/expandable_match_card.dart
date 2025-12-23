@@ -209,7 +209,7 @@ class _ExpandableMatchCardState extends State<ExpandableMatchCard>
                   crossAxisAlignment: CrossAxisAlignment.center,
                   children: [
                   // LEFT: Time/Status Column (Fixed Width)
-                  Container(
+                  SizedBox(
                     width: 45,
                     child: Column(
                       mainAxisSize: MainAxisSize.min,
@@ -634,7 +634,7 @@ class _ExpandableMatchCardState extends State<ExpandableMatchCard>
                     const SizedBox(height: 10),
                 ],
               );
-            }).toList(),
+            }),
           ],
         ),
       ),
@@ -791,7 +791,6 @@ class _ScoreInputRow extends StatelessWidget {
     required this.awayController,
     required this.homeFocusNode,
     required this.awayFocusNode,
-    this.onScoreChanged,
   });
 
   @override
@@ -1038,7 +1037,6 @@ class _XPBadge extends StatelessWidget {
 
   const _XPBadge({
     required this.xp,
-    this.isPotential = false,
   });
 
   @override
@@ -1075,7 +1073,7 @@ class _XPBadge extends StatelessWidget {
             ),
           if (isPotential) const SizedBox(width: 3),
           Text(
-            xp > 0 ? '+$xp XP' : '${xp} XP',
+            xp > 0 ? '+$xp XP' : '$xp XP',
             style: Theme.of(context).textTheme.labelSmall?.copyWith(
                   color: Colors.white.withOpacity(0.95),
                   fontWeight: FontWeight.w600,

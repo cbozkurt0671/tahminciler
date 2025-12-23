@@ -47,6 +47,9 @@ class AppColors {
   /// A blue accent color used by some widgets as `gradientBlue`
   static const Color gradientBlue = Color(0xFF2196F3);
 
+  /// A purple accent color used by some examples and widgets as `gradientPurple`
+  static const Color gradientPurple = Color(0xFFB06AB3);
+
   // Border Radius
   /// Main cards border radius
   static const double cardRadius = 16.0;

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'dart:ui';
 import '../../../home/presentation/screens/home_page.dart';
+import '../../../../core/services/pocketbase_service.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -16,6 +17,14 @@ class _LoginScreenState extends State<LoginScreen> {
   final _passwordController = TextEditingController();
   final _nameController = TextEditingController();
   bool _obscurePassword = true;
+  bool _isLoading = false;
+  final _pbService = PocketBaseService();
+
+  @override
+  void initState() {
+    super.initState();
+    _pbService.initialize();
+  }
 
   @override
   void dispose() {
@@ -23,6 +32,122 @@ class _LoginScreenState extends State<LoginScreen> {
     _passwordController.dispose();
     _nameController.dispose();
     super.dispose();
+  }
+
+  void _showSnackBar(String message, {bool isError = false}) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(message),
+        backgroundColor: isError ? Colors.red : const Color(0xFF0df259),
+        behavior: SnackBarBehavior.floating,
+      ),
+    );
+  }
+
+  Future<void> _handleLogin() async {
+    if (_emailController.text.isEmpty || _passwordController.text.isEmpty) {
+      _showSnackBar('Lütfen tüm alanları doldurun', isError: true);
+      return;
+    }
+
+    setState(() => _isLoading = true);
+
+    try {
+      final authData = await _pbService.login(
+        _emailController.text.trim(),
+        _passwordController.text,
+      );
+
+      print('Login successful!');
+      print('User ID: ${authData.record.id}');
+      print('Token: ${authData.token}');
+
+      if (mounted) {
+        _showSnackBar('Giriş başarılı!');
+        // Navigate to home page
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(builder: (context) => const HomePage()),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        _showSnackBar(e.toString(), isError: true);
+      }
+    } finally {
+      if (mounted) {
+        setState(() => _isLoading = false);
+      }
+    }
+  }
+
+  Future<void> _handleRegister() async {
+    if (_emailController.text.isEmpty || _passwordController.text.isEmpty) {
+      _showSnackBar('Lütfen tüm alanları doldurun', isError: true);
+      return;
+    }
+
+    if (_passwordController.text.length < 8) {
+      _showSnackBar('Şifre en az 8 karakter olmalı', isError: true);
+      return;
+    }
+
+    setState(() => _isLoading = true);
+
+    try {
+      final authData = await _pbService.register(
+        _emailController.text.trim(),
+        _passwordController.text,
+        _passwordController.text,
+        name: _nameController.text.trim().isNotEmpty ? _nameController.text.trim() : null,
+      );
+
+      print('Registration successful!');
+      print('User ID: ${authData.record.id}');
+      print('Token: ${authData.token}');
+
+      if (mounted) {
+        _showSnackBar('Kayıt başarılı! Hoş geldiniz!');
+        // Navigate to home page
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(builder: (context) => const HomePage()),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        _showSnackBar(e.toString(), isError: true);
+      }
+    } finally {
+      if (mounted) {
+        setState(() => _isLoading = false);
+      }
+    }
+  }
+
+  Future<void> _handleForgotPassword() async {
+    if (_emailController.text.isEmpty) {
+      _showSnackBar('Lütfen e-posta adresinizi girin', isError: true);
+      return;
+    }
+
+    setState(() => _isLoading = true);
+
+    try {
+      await _pbService.requestPasswordReset(_emailController.text.trim());
+
+      if (mounted) {
+        _showSnackBar('Şifre sıfırlama e-postası gönderildi!');
+      }
+    } catch (e) {
+      if (mounted) {
+        _showSnackBar(e.toString(), isError: true);
+      }
+    } finally {
+      if (mounted) {
+        setState(() => _isLoading = false);
+      }
+    }
   }
 
   @override
@@ -374,9 +499,7 @@ class _LoginScreenState extends State<LoginScreen> {
           Align(
             alignment: Alignment.centerRight,
             child: TextButton(
-              onPressed: () {
-                // TODO: Forgot password logic
-              },
+              onPressed: _isLoading ? null : _handleForgotPassword,
               child: Text(
                 'Şifremi Unuttum?',
                 style: GoogleFonts.lexend(
@@ -438,23 +561,24 @@ class _LoginScreenState extends State<LoginScreen> {
   // Main Action Button
   Widget _buildMainButton() {
     return GestureDetector(
-      onTap: () {
-        // TODO: Login/Register logic
-        if (isLogin) {
-          print('Login: ${_emailController.text}');
-        } else {
-          print('Register: ${_nameController.text}, ${_emailController.text}');
-        }
-      },
+      onTap: _isLoading
+          ? null
+          : () {
+              if (isLogin) {
+                _handleLogin();
+              } else {
+                _handleRegister();
+              }
+            },
       child: Container(
         width: double.infinity,
         padding: const EdgeInsets.symmetric(vertical: 18),
         decoration: BoxDecoration(
-          color: const Color(0xFF0df259),
+          color: _isLoading ? Colors.grey : const Color(0xFF0df259),
           borderRadius: BorderRadius.circular(16),
           boxShadow: [
             BoxShadow(
-              color: const Color(0xFF0df259).withOpacity(0.3),
+              color: (_isLoading ? Colors.grey : const Color(0xFF0df259)).withOpacity(0.3),
               blurRadius: 20,
               offset: const Offset(0, 8),
             ),
@@ -463,20 +587,31 @@ class _LoginScreenState extends State<LoginScreen> {
         child: Row(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Text(
-              isLogin ? 'Giriş Yap' : 'Kayıt Ol',
-              style: GoogleFonts.lexend(
-                fontSize: 16,
-                fontWeight: FontWeight.bold,
-                color: const Color(0xFF000000),
+            if (_isLoading)
+              const SizedBox(
+                width: 20,
+                height: 20,
+                child: CircularProgressIndicator(
+                  strokeWidth: 2,
+                  valueColor: AlwaysStoppedAnimation<Color>(Color(0xFF000000)),
+                ),
+              )
+            else ...[
+              Text(
+                isLogin ? 'Giriş Yap' : 'Kayıt Ol',
+                style: GoogleFonts.lexend(
+                  fontSize: 16,
+                  fontWeight: FontWeight.bold,
+                  color: const Color(0xFF000000),
+                ),
               ),
-            ),
-            const SizedBox(width: 8),
-            const Icon(
-              Icons.arrow_forward,
-              color: Color(0xFF000000),
-              size: 20,
-            ),
+              const SizedBox(width: 8),
+              const Icon(
+                Icons.arrow_forward,
+                color: Color(0xFF000000),
+                size: 20,
+              ),
+            ],
           ],
         ),
       ),

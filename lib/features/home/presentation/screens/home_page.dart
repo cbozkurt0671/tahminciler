@@ -1,5 +1,3 @@
-import 'dart:math';
-import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
@@ -159,8 +157,8 @@ class _HomePageState extends State<HomePage> {
           final month = monthIndex == -1 ? _selectedDate.month : monthIndex + 1;
 
           int hour = 0, minute = 0;
-          if (m.matchTime != null && m.matchTime!.contains(':')) {
-            final hm = m.matchTime!.split(':');
+          if (m.matchTime.contains(':')) {
+            final hm = m.matchTime.split(':');
             hour = int.tryParse(hm[0]) ?? 0;
             minute = int.tryParse(hm.length > 1 ? hm[1] : '0') ?? 0;
           }
@@ -770,7 +768,7 @@ class _HomePageState extends State<HomePage> {
                         });
                       },
                     ),
-                  )).toList(),
+                  )),
             ],
           ),
         );

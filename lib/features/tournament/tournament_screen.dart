@@ -123,7 +123,9 @@ class _TournamentScreenState extends State<TournamentScreen> {
           roundsMap.putIfAbsent(m.roundIndex, () => []).add(m);
         }
         final sortedKeys = roundsMap.keys.toList()..sort();
-        for (final k in sortedKeys) rounds.add(roundsMap[k]!);
+        for (final k in sortedKeys) {
+          rounds.add(roundsMap[k]!);
+        }
 
         if (rounds.isEmpty) return const SizedBox.shrink();
 

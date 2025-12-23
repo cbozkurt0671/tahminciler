@@ -2,7 +2,6 @@ import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:world_cup_app/core/theme/app_colors.dart';
-import 'package:world_cup_app/features/home/presentation/screens/home_page.dart';
 import 'package:world_cup_app/features/groups/presentation/screens/groups_screen.dart';
 import 'package:world_cup_app/features/profile/presentation/screens/profile_screen.dart';
 import 'package:world_cup_app/features/notifications/presentation/screens/notifications_screen.dart';

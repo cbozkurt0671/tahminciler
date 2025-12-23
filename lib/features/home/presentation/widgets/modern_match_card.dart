@@ -55,7 +55,7 @@ class _ModernMatchCardState extends State<ModernMatchCard>
   final _homeScoreController = TextEditingController();
   final _awayScoreController = TextEditingController();
   bool _isExpanded = false;
-  Map<String, String> _selectedAnswers = {}; // questionId -> answer
+  final Map<String, String> _selectedAnswers = {}; // questionId -> answer
   late AnimationController _pulseController;
   late Animation<double> _pulseAnimation;
 

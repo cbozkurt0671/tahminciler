@@ -4,8 +4,6 @@ import 'package:google_fonts/google_fonts.dart';
 import '../../data/models/league_entity.dart';
 import '../../data/models/user_entity.dart';
 import '../../../../core/service_locator.dart';
-import '../../domain/repositories/social_repository.dart';
-import '../../domain/repositories/auth_repository.dart';
 import 'league_detail_screen.dart';
 
 class SocialScreen extends StatefulWidget {

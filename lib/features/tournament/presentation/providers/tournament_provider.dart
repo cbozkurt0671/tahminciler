@@ -73,8 +73,8 @@ class TournamentProvider extends ChangeNotifier {
       final nextMatch = matches.firstWhere((m) => m.id == match.nextMatchId);
       if (nextMatch.team1 == null) {
         nextMatch.team1 = winner;
-      } else if (nextMatch.team2 == null) {
-        nextMatch.team2 = winner;
+      } else {
+        nextMatch.team2 ??= winner;
       }
     }
 

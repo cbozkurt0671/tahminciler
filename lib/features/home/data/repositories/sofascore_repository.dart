@@ -23,6 +23,7 @@ class SofaScoreRepository implements MatchRepository {
   }
   
   /// Set the date to fetch matches for
+  @override
   void setSelectedDate(DateTime date) {
     _selectedDate = date;
     clearCache(); // Clear cache when date changes
@@ -214,7 +215,7 @@ class SofaScoreRepository implements MatchRepository {
       final matches = matchesMap.values.toList();
 
       final dateStr = '${_selectedDate.day}/${_selectedDate.month}/${_selectedDate.year}';
-      print('✅ Found ${matches.length} matches for $dateStr (${skippedByLeague} matches from other leagues filtered out)');
+      print('✅ Found ${matches.length} matches for $dateStr ($skippedByLeague matches from other leagues filtered out)');
       
       if (matches.isEmpty) {
         print('ℹ️ No matches found for target leagues (Premier League, Süper Lig, Bundesliga, Serie A)');
@@ -557,6 +558,7 @@ class SofaScoreRepository implements MatchRepository {
   }
 
   /// Clear cache to force refresh
+  @override
   void clearCache() {
     _cachedMatches = null;
     print('🔄 SofaScore cache cleared');

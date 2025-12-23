@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../home/presentation/screens/group_detail_screen.dart';
-import '../../../home/data/dummy_data.dart';
 import 'package:world_cup_app/features/notifications/presentation/screens/notifications_screen.dart';
 
 class GroupsScreen extends StatefulWidget {

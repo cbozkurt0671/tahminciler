@@ -1,4 +1,3 @@
-import 'dart:math';
 import '../../data/models/user_entity.dart';
 import '../../data/models/power_up_entity.dart';
 import '../../domain/repositories/auth_repository.dart';

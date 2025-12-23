@@ -4,8 +4,7 @@ import '../../../../core/theme/app_colors.dart';
 import '../../../../core/utils/image_loader.dart';
 import '../../data/models/match_model.dart';
 
-/// Card widget for quick match prediction
-/// Allows users to input scores directly
+/// Simplified, valid implementation of QuickPredictCard to fix parser errors.
 class QuickPredictCard extends StatefulWidget {
   final MatchModel match;
   final Function(int homeScore, int awayScore)? onPredictionChanged;
@@ -45,7 +44,6 @@ class _QuickPredictCardState extends State<QuickPredictCard> {
   void _onScoreChanged() {
     final homeScore = int.tryParse(_homeScoreController.text);
     final awayScore = int.tryParse(_awayScoreController.text);
-    
     if (homeScore != null && awayScore != null) {
       widget.onPredictionChanged?.call(homeScore, awayScore);
     }
@@ -81,64 +79,52 @@ class _QuickPredictCardState extends State<QuickPredictCard> {
           onTap: widget.onCardTap,
           borderRadius: BorderRadius.circular(AppColors.cardRadius),
           child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
             child: Column(
+              mainAxisSize: MainAxisSize.min,
               children: [
-                // Main row with teams and score inputs (fixed height to vertically center inputs)
-                SizedBox(
-                  height: 68,
-                  child: Row(
-                    crossAxisAlignment: CrossAxisAlignment.center,
-                    children: [
-                    // Home Team
+                Row(
+                  children: [
+                    // Home
                     Expanded(
-                      flex: 2,
+                      flex: 3,
                       child: Row(
                         children: [
                           CachedTeamLogoWidget(
                             teamId: widget.match.homeTeamId ?? 0,
                             size: 30,
                             fit: BoxFit.contain,
-                            fallbackIconColor: AppColors.textSecondary.withOpacity(0.5),
+                            fallbackIconColor: AppColors.textSecondary
+                                .withOpacity(0.5),
                           ),
-                          const SizedBox(width: 12),
+                          const SizedBox(width: 8),
                           Expanded(
                             child: Text(
                               widget.match.homeTeam,
-                              style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                                fontWeight: FontWeight.w600,
-                              ),
                               overflow: TextOverflow.ellipsis,
                             ),
                           ),
                         ],
                       ),
                     ),
-                    
-                    // Score Input Area
+
+                    // Scores
                     Expanded(
                       flex: 2,
                       child: Row(
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
-                          // Home Score Input
                           _ScoreInput(
                             controller: _homeScoreController,
                             focusNode: _homeFocusNode,
                           ),
-                          
-                          // Dash separator
-                          Padding(
-                            padding: const EdgeInsets.symmetric(horizontal: 8),
+                          const Padding(
+                            padding: EdgeInsets.symmetric(horizontal: 8),
                             child: Text(
                               '-',
-                              style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                                color: AppColors.textSecondary.withOpacity(0.5),
-                              ),
+                              style: TextStyle(color: Colors.white70),
                             ),
                           ),
-                          
-                          // Away Score Input
                           _ScoreInput(
                             controller: _awayScoreController,
                             focusNode: _awayFocusNode,
@@ -146,55 +132,37 @@ class _QuickPredictCardState extends State<QuickPredictCard> {
                         ],
                       ),
                     ),
-                    
-                    // Away Team
+
+                    // Away
                     Expanded(
-                      flex: 2,
+                      flex: 3,
                       child: Row(
                         mainAxisAlignment: MainAxisAlignment.end,
                         children: [
                           Expanded(
                             child: Text(
                               widget.match.awayTeam,
-                              style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                                fontWeight: FontWeight.w600,
-                              ),
                               textAlign: TextAlign.end,
                               overflow: TextOverflow.ellipsis,
                             ),
                           ),
-                          const SizedBox(width: 12),
+                          const SizedBox(width: 8),
                           CachedTeamLogoWidget(
                             teamId: widget.match.awayTeamId ?? 0,
                             size: 30,
-                            fit: BoxFit.contain,
-                            fallbackIconColor: AppColors.textSecondary.withOpacity(0.5),
                           ),
                         ],
                       ),
                     ),
                   ],
                 ),
-                
-                // Match time and date
-                const SizedBox(height: 12),
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Icon(
-                      Icons.access_time_rounded,
-                      size: 14,
-                      color: AppColors.textSecondary.withOpacity(0.7),
-                    ),
-                    const SizedBox(width: 4),
-                    Text(
-                      '${widget.match.matchDate} • ${widget.match.matchTime}',
-                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                        color: AppColors.textSecondary.withOpacity(0.7),
-                        fontSize: 12,
-                      ),
-                    ),
-                  ],
+
+                const SizedBox(height: 10),
+                Text(
+                  '${widget.match.matchDate} • ${widget.match.matchTime}',
+                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                    color: AppColors.textSecondary.withOpacity(0.7),
+                  ),
                 ),
               ],
             ),
@@ -205,28 +173,21 @@ class _QuickPredictCardState extends State<QuickPredictCard> {
   }
 }
 
-/// Score input field widget
 class _ScoreInput extends StatelessWidget {
   final TextEditingController controller;
   final FocusNode focusNode;
-
-  const _ScoreInput({
-    required this.controller,
-    required this.focusNode,
-  });
+  const _ScoreInput({required this.controller, required this.focusNode});
 
   @override
   Widget build(BuildContext context) {
     return Container(
       width: 40,
-      height: 35,
+      height: 36,
       decoration: BoxDecoration(
-        color: Colors.white.withOpacity(0.1),
+        color: Colors.white.withOpacity(0.06),
         borderRadius: BorderRadius.circular(8),
         border: Border.all(
-          color: focusNode.hasFocus
-              ? Colors.white.withOpacity(0.6)
-              : Colors.white.withOpacity(0.3),
+          color: focusNode.hasFocus ? Colors.white70 : Colors.white24,
           width: focusNode.hasFocus ? 2 : 1,
         ),
       ),
@@ -234,14 +195,8 @@ class _ScoreInput extends StatelessWidget {
         controller: controller,
         focusNode: focusNode,
         textAlign: TextAlign.center,
-        textAlignVertical: TextAlignVertical.center,
         keyboardType: TextInputType.number,
         maxLength: 1,
-        style: Theme.of(context).textTheme.titleLarge?.copyWith(
-          fontWeight: FontWeight.w700,
-          color: Colors.white,
-          fontSize: 16,
-        ),
         inputFormatters: [
           FilteringTextInputFormatter.digitsOnly,
           LengthLimitingTextInputFormatter(1),
@@ -251,6 +206,10 @@ class _ScoreInput extends StatelessWidget {
           counterText: '',
           isDense: true,
           contentPadding: EdgeInsets.zero,
+        ),
+        style: Theme.of(context).textTheme.titleLarge?.copyWith(
+          color: Colors.white,
+          fontWeight: FontWeight.w700,
         ),
       ),
     );

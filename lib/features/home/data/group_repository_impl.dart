@@ -1,7 +1,6 @@
 import 'dart:async';
 import 'group_repository.dart';
 import '../domain/entities/group.dart';
-import '../domain/entities/member.dart';
 
 /// Dummy implementation — replace with real network/backend calls later.
 class GroupRepositoryImpl implements GroupRepository {

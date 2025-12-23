@@ -3,22 +3,9 @@ import 'package:intl/date_symbol_data_local.dart';
 import 'package:provider/provider.dart';
 import 'core/theme/app_theme.dart';
 import 'core/service_locator.dart';
-import 'features/home/presentation/screens/home_screen.dart';
 import 'features/auth/presentation/screens/login_screen.dart';
-import 'features/home/presentation/screens/modern_home_page.dart';
-import 'features/home/presentation/screens/home_page.dart';
 import 'features/tournament/presentation/providers/tournament_provider.dart';
 
-import 'package:flutter/material.dart';
-import 'package:intl/date_symbol_data_local.dart';
-import 'package:provider/provider.dart';
-import 'core/theme/app_theme.dart';
-import 'core/service_locator.dart';
-import 'features/home/presentation/screens/home_screen.dart';
-import 'features/auth/presentation/screens/login_screen.dart';
-import 'features/home/presentation/screens/modern_home_page.dart';
-import 'features/home/presentation/screens/home_page.dart';
-import 'features/tournament/presentation/providers/tournament_provider.dart';
 
 void main() async {
   // Ensure Flutter bindings are initialized
